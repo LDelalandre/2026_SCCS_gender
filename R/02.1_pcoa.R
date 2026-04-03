@@ -4,7 +4,8 @@ source("R/functions.R")
 library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
 
-# Matrix on response variables ####
+# pcoa ####
+## Matrix on response variables ####
 
 whyte_vars <- gender_response %>% 
   filter(column_number_whyte78 %in% rep(1:52)) %>% 
@@ -28,7 +29,7 @@ mat <- whyte_data_wide %>%
   select(-soc_id) %>%       # remove the id column
   as.matrix()
 
-# Missingness ####
+## Missingness ####
 
 society_coverage <- rowMeans(!is.na(mat))
 data.frame(
@@ -67,7 +68,7 @@ mat[, col_miss >= 0.30]
 
 mat[,"SCCS622"] %>% is.na() %>% mean()
 
-# PCoA ####
+## Ordinal and binary variables ####
 mat_filtered2 <- mat_filtered[, ! colnames(mat_filtered) == "DV34"] #LOCALITY
 
 # Tell daisy which variables are ordinal and which are binary
@@ -90,6 +91,7 @@ mat_ord_fixed[, binary_cols] <- lapply(mat_ord[, binary_cols], function(x) {
   ifelse(x == vals[1], 0, ifelse(x == vals[2], 1, NA))
 })
 
+## Distance and pcoa ####
 # Gower distance — handles NAs and ordinal variables
 gower_ordinal <- cluster::daisy(mat_ord_fixed,
                                 metric = "gower",
@@ -98,4 +100,15 @@ gower_ordinal <- cluster::daisy(mat_ord_fixed,
                                   symm = binary_cols
                                 ))
 
-pcoa_result <- pcoa(gower_ordinal)
+pcoa_result <- ape::pcoa(gower_ordinal)
+
+saveRDS(pcoa_result, here::here("output/pcoa_result"))
+
+
+# Robustness checks ####
+
+
+
+
+
+
