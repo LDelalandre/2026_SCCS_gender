@@ -1,0 +1,26 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.csv
+*.docx
+*.xlsx
+*.pdf
+*.png
+*.jpg
+*.html
+*.svg
+data/
+output/
+draft/
+mass_grave/
+
+# rendered outputs
+*.html
+*.pdf
+*.docx
+*.nb.html
+
+# cache and generated files
+*_cache/
+*_files/
