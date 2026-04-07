@@ -1,8 +1,5 @@
 
-
-# Women's status variables ####
-
-## Dispersion explained ####
+## Scree plot ####
 pcoa_result <- readRDS(here::here("output/pcoa_result"))
 
 eigenvalues       <- pcoa_result$values$Eigenvalues
@@ -30,7 +27,7 @@ scree_df <- data.frame(
 
 sum(scree_df$observed[1:7])
 
-ggplot(scree_df %>% filter(axis <= 15), aes(x = axis)) +
+scree_plot <- ggplot(scree_df %>% filter(axis <= 15), aes(x = axis)) +
   geom_col(aes(y = observed), fill = "steelblue", alpha = 0.7) +
   geom_line(aes(y = broken_stick), colour = "red", linewidth = 1) +
   geom_point(aes(y = broken_stick), colour = "red") +
@@ -42,14 +39,15 @@ ggplot(scree_df %>% filter(axis <= 15), aes(x = axis)) +
   scale_y_continuous(labels = scales::percent) +
   theme_minimal()
 
+ggsave("output/2.2_pcoa_figures_scree_plot.png", scree_plot)
 
-# Coordinates and loadings ####
+## Table variables per axes ####
 
 # Society coordinates on PCoA axes
 coords <- pcoa_result$vectors  # societies × axes
 
 # Correlate each variable with each axis (Spearman, handles ordinal)
-n_axes <- 12  # however many you decided to keep
+n_axes <- 10  # however many you decided to keep
 
 variable_loadings <- matrix(NA, 
                             nrow = ncol(mat_filtered), 
@@ -64,10 +62,6 @@ for(i in 1:n_axes){
         use    = "pairwise.complete.obs")
   })
 }
-
-## Variables well captured ####
-
-n_axes <- 10
 
 # R-squared of each variable across all axes
 r2_total <- apply(variable_loadings[, 1:n_axes], 1, function(x){
@@ -87,7 +81,8 @@ r2_distrib <- data.frame(
 
 
 ggplot(r2_distrib, aes(x = r2_total)) + 
-  geom_histogram()
+  geom_histogram() +
+  ggtitle("r2 in the variable explained by all the axes")
 
 # Specificity of each variable to each axis
 r2_matrix <- variable_loadings[, 1:10]^2
@@ -170,3 +165,102 @@ all_axes_table %>%
     )
   ) %>%
   row_spec(0, bold = TRUE, background = "#f0f0f0")
+
+
+## Heatmap loading ####
+loading_long_unfiltered <- map_dfr(1:10, function(ax) {
+  data.frame(
+    variable     = rownames(r2_matrix),
+    loading      = variable_loadings[, ax],
+    r2_total     = rowSums(r2_matrix, na.rm = TRUE),
+    r2_this_axis = r2_matrix[, ax]
+  ) %>%
+    mutate(pco = paste0("PCo", ax))
+}) %>%
+  left_join(whyte_vars %>% select(var_id_whyte, title, domain),
+            by = c("variable" = "var_id_whyte")) %>%
+  left_join(
+    data.frame(
+      pco = paste0("PCo", 1:10),
+      pct = paste0("PCo", 1:10, "\n(", round(variance_explained[1:10]*100, 1), "%)")
+    ),
+    by = "pco"
+  ) %>%
+  mutate(pct = factor(pct, levels = paste0("PCo", 1:10, "\n(", round(variance_explained[1:10]*100, 1), "%)"))) %>%
+  mutate(title = reorder(title, as.numeric(factor(variable))))
+
+
+# Create ordered y-axis labels
+loading_long_unfiltered <- loading_long_unfiltered %>%
+  arrange(variable) %>%
+  mutate(
+    var_label = paste0(variable, " – ", title),
+    var_label = factor(var_label, levels = unique(var_label)),
+    low_r2    = r2_total < 0.3 | r2_this_axis < 0.3
+  )
+
+loading_long_unfiltered <- loading_long_unfiltered %>%
+  arrange(as.numeric(str_extract(variable, "[0-9]+"))) %>%
+  mutate(
+    var_label = paste0(variable, " – ", title),
+    var_label = factor(var_label, levels = unique(var_label)),
+    low_r2    = r2_total < 0.3 | r2_this_axis < 0.3
+  )
+
+loading_long_unfiltered <- loading_long_unfiltered %>%
+  mutate(
+    pct_this_axis = r2_this_axis / r2_total * 100,
+    low_r2        = r2_total < r2_threshold | pct_this_axis < pct_threshold
+  ) %>% 
+  mutate(weighted_loading = loading * sqrt(r2_total))
+
+loadings_axes_unfiltered <- ggplot(loading_long_unfiltered, aes(x = pct, y = var_label, fill = loading)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = round(loading, 2),
+                color = abs(loading) > 0.4,
+                alpha = ifelse(low_r2, 0.4, 1)),
+            size = 2.8) +
+  scale_fill_gradient2(
+    low      = "#cc0000",
+    mid      = "white",
+    high     = "#1a7a1a",
+    midpoint = 0,
+    name     = "Loading\n(Spearman r)"
+  ) +
+  scale_color_manual(values = c("TRUE" = "white", "FALSE" = "grey30"), guide = "none") +
+  scale_alpha_identity() +
+  labs(
+    x        = NULL,
+    y        = NULL,
+    title    = "Variable loadings on PCoA axes",
+    subtitle = "Faded tiles: r² < 0.3 and < 30% variance on this axis" 
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x     = element_text(size = 9),
+    axis.text.y     = element_text(size = 9),
+    panel.grid      = element_blank(),
+    legend.position = "right"
+  ) +
+  scale_y_discrete(limits = rev)
+
+ggsave(here::here("output/2.2_pcoa_figures_loadings_axes_unfiltered.png"), loadings_axes_unfiltered, width = 13, height = 10)
+loadings_axes_unfiltered
+
+# Plot PCoA ####
+# ── Society coordinates with metadata ────────────────────────────────────────
+coords_df <- as.data.frame(pcoa_result$vectors[, 1:10])
+colnames(coords_df) <- paste0("Ax", 1:10)
+coords_df$soc_id <- rownames(coords_df)
+
+coords_df <- coords_df %>%
+  left_join(societies %>% select(soc_id, pref_name_for_society, 
+                                 origLat, origLong),
+            by = "soc_id")
+
+additional_response_vars <- c("SCCS793", "SCCS794", "SCCS795", # (Ross: political participation)
+                              "SCCS667", # Sanday, rape
+                              "SCCS754") # Wife-beating (Broude)
+
+
+

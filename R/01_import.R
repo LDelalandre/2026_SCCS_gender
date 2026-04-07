@@ -22,6 +22,8 @@ gender_response <- read.csv(here::here("data/SCCS/gender_response_variables.csv"
 
 ### Predictor variables ####
 
+# TODO: remove them, not useful (?)
+
 var_hierarchy <- c("Political Organization (Adapted from Murdock 1961, P. 207)",
                    "Crimes against Person Punished",
                    "(No) Government Full-time Bureaucrats",
