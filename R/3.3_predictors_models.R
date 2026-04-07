@@ -1,3 +1,50 @@
+
+
+# Correlations ####
+
+# define your predictors and axes
+predictors <- c("complexity", "agriculture_cereals", "agriculture_importance",
+                "herding_importance", "herding_milk", "hunting",
+                "warfare_intensity", "warfare_location", "matri",
+                "creation_stories", "weaning", "taboo")
+
+axes <- paste0("Axis.", 1:8)
+
+# compute spearman correlations with p-values
+cor_table <- map_dfr(predictors, function(pred) {
+  map_dfc(axes, function(ax) {
+    if (ax %in% names(pred_resp) & pred %in% names(pred_resp)) {
+      test <- cor.test(pred_resp[[pred]], pred_resp[[ax]],
+                       method = "spearman",
+                       use = "complete.obs")
+      tibble(!!ax := sprintf("%.2f%s",
+                             test$estimate,
+                             case_when(test$p.value < 0.001 ~ "***",
+                                       test$p.value < 0.01  ~ "**",
+                                       test$p.value < 0.05  ~ "*",
+                                       test$p.value < 0.10  ~ "†",
+                                       TRUE                 ~ "")))
+    } else {
+      tibble(!!ax := NA_character_)
+    }
+  }) %>%
+    mutate(predictor = pred, .before = 1)
+})
+
+print(cor_table)
+
+library(knitr)
+library(kableExtra)
+
+cor_table %>%
+  kable(caption = "Spearman correlations between predictors and response PCoA axes",
+        col.names = c("Predictor", paste0("Axis ", 1:8)),
+        align = c("l", rep("c", 8))) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE) %>%
+  footnote(general = "† p<0.10, * p<0.05, ** p<0.01, *** p<0.001")
+
+
 # Models ####
 library("brms")
 run_models <- F

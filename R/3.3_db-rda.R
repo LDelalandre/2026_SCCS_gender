@@ -157,6 +157,13 @@ scores_wide <- scores_wide %>%
                   herding_importance, hunting, matri), 
                 ~ round(.x, 2)))
 
+f_predictor <- "agriculture_cereals"
+
+scores_wide %>% 
+  filter(abs(get(f_predictor)) > 0.2) %>% 
+  arrange(get(f_predictor)) %>% 
+  select(c("var_id_whyte", "title", all_of(f_predictor))) %>% 
+  View
 
 
 # PLot ####
