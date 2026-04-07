@@ -263,4 +263,71 @@ additional_response_vars <- c("SCCS793", "SCCS794", "SCCS795", # (Ross: politica
                               "SCCS754") # Wife-beating (Broude)
 
 
+# pred_resp %>%
+#   ggplot(aes(x = Axis.1, y = Axis.2)) +
+#   geom_point(aes(color = complexity), size = 2.5, alpha = 0.8) +
+#   scale_color_gradient2(low = "#1A5276", mid = "white", high = "#B03A2E",
+#                         midpoint = 0, name = "Complexity") +
+#   geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+#   geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
+#   labs(x = "Axis 1", y = "Axis 2") +
+#   theme_minimal(base_size = 13)
+
+# Excel file with clickable HRAF links ####
+# ── Build context_wide from key SCCS variables ────────────────────────────────
+
+context_vars <- c(
+  "SCCS1",   # Subsistence economy
+  "SCCS4",   # Settlement pattern
+  "SCCS5",   # Community size
+  "SCCS6",   # Jurisdictional hierarchy
+  "SCCS156", # Region
+  "SCCS157"  # Subsistence economy (Murdock)
+)
+
+society_profile <- societies %>%
+  select(soc_id, main_focal_year,HRAF_name_ID, HRAF_link)
+
+# Check which exist in your data
+variables %>% 
+  filter(var_id %in% context_vars) %>%
+  select(var_id, title) %>%
+  print()
+
+context_wide <- sccs %>%
+  filter(var_id %in% context_vars) %>%
+  group_by(soc_id, var_id) %>%
+  slice_max(year, na_rm = TRUE, n = 1) %>%
+  ungroup() %>%
+  select(soc_id, var_id, code) %>%
+  pivot_wider(names_from = var_id, values_from = code) %>%
+  # join readable names for context variables
+  rename_with(~ variables$title[match(.x, variables$var_id)],
+              any_of(context_vars)) 
+
+# ── Master coords table with all metadata ────────────────────────────────────
+
+coord_societies <- coords_df %>%
+  left_join(society_profile, by = "soc_id") %>%
+  left_join(context_wide, by = "soc_id")
+
+
+# Save with URL recognition
+
+library(openxlsx)
+
+wb <- createWorkbook()
+addWorksheet(wb, "Sheet1")
+
+writeData(wb, "Sheet1", coord_societies)
+
+url_col_index <- which(names(coord_societies) == "HRAF_link")
+
+writeFormula(wb, "Sheet1",
+             x = paste0('HYPERLINK("', coord_societies$HRAF_link, '","', coord_societies$HRAF_link, '")'),
+             startCol = url_col_index,
+             startRow = 2
+)
+
+saveWorkbook(wb, here::here("output/2.2_pcoa_figures_coord_societies.xlsx"), overwrite = TRUE)
 

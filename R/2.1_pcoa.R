@@ -1,9 +1,10 @@
 source("R/01_import.R")
 source("R/functions.R")
-library("vegan")
+
 
 library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
+library(vegan) # for robustness
 
 # pcoa ####
 ## Matrix on response variables ####
@@ -32,6 +33,8 @@ whyte_data_wide <- sccs %>%
 mat <- whyte_data_wide %>%
   select(-soc_id) %>%       # remove the id column
   as.matrix()
+
+rownames(mat) <- whyte_data_wide$soc_id
 
 ## Missingness ####
 
@@ -81,6 +84,7 @@ mat[,"SCCS622"] %>% is.na() %>% mean()
 mat_ord <- data.frame(lapply(as.data.frame(mat_filtered), function(x) {
   factor(x, levels = sort(unique(x[!is.na(x)])), ordered = TRUE)
 }))
+rownames(mat_ord) <- rownames(mat_filtered)
 
 binary_cols <- c(6, 9, 13, 20, 21, 27, 33, 36, 47, 51)
 ordinal_cols <- setdiff(1:ncol(mat_ord), binary_cols)
