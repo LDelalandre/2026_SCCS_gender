@@ -123,7 +123,7 @@ profiles_all <- map(predictors_to_profile, function(pred) {
   
   cap_scores <- scores(dbrda_focal, display = "sites", choices = 1)
   
-  cors <- cor(mat_filtered2[complete_idx, ],
+  cors <- cor(mat_filtered[complete_idx, ],
               cap_scores,
               use = "pairwise.complete.obs")[, 1]
   
@@ -166,7 +166,7 @@ scores_wide %>%
   View
 
 
-# PLot ####
+# Plot ####
 
 scores_wide %>%
   ggplot(aes(x = agriculture_cereals, y = complexity, label = title)) +
@@ -180,3 +180,30 @@ scores_wide %>%
        title = "Gender variables by predictor association") +
   theme_bw() +
   geom_smooth(method = "lm")
+
+
+# Using a priori categories ####
+
+# Add your categories to scores_wide
+scores_wide <- scores_wide %>%
+  left_join(
+    whyte_vars %>% select(var_id_whyte, category1, category2),
+    by = "var_id_whyte"
+  )
+
+# Compare db-RDA correlation distributions across category1
+scores_wide %>%
+  filter(!is.na(category1)) %>%
+  pivot_longer(cols = c(agriculture_cereals, matri, herding_importance),
+               names_to = "predictor",
+               values_to = "correlation") %>%
+  ggplot(aes(x = category1, y = correlation, fill = predictor)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~ predictor) +
+  coord_flip() +
+  theme_bw() +
+  labs(x = NULL, 
+       y = "Correlation with predictor-constrained axis",
+       title = "Which domains does each predictor affect?") +
+  geom_point()

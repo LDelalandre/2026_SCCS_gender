@@ -6,6 +6,9 @@ library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
 library(vegan) # for robustness
 
+
+
+
 # pcoa ####
 ## Matrix on response variables ####
 
@@ -13,10 +16,15 @@ whyte_vars_to_remove <- c("DV34") # locality
 
 whyte_vars <- gender_response %>% 
   filter(column_number_whyte78 %in% rep(1:52)) %>% 
-  select(var_id, title,var_id_whyte, column_number_whyte78, domain, domain_name) %>%
+  select(var_id, title,var_id_whyte, column_number_whyte78, category1, category2, domain, domain_name) %>%
   mutate(short_title = paste0(var_id, "_", str_trunc(title, width = 30, ellipsis = "..."))) %>% 
   mutate(title = if_else(var_id == "SCCS625", paste("(No)", title), title)) %>%  # high = no high value on men being agressive
   filter(!var_id_whyte %in% whyte_vars_to_remove) # Remove locality
+
+# Categories of variables
+whyte_vars %>% 
+  arrange(category1, category2) %>% 
+  select(category1, category2, title, var_id_whyte) %>% View
   
 whyte_codes <- get_codes(whyte_vars$title)
 
