@@ -1,4 +1,18 @@
 
+
+pcoa_result <-  readRDS(here::here("output/pcoa_result"))
+
+coords_df <- as.data.frame(pcoa_result$vectors[, 1:10])
+colnames(coords_df) <- paste0("Ax", 1:10)
+coords_df$soc_id <- rownames(coords_df)
+
+coords_df <- coords_df %>%
+  left_join(societies %>% select(soc_id, pref_name_for_society, 
+                                 origLat, origLong),
+            by = "soc_id")
+
+
+
 ## Scree plot ####
 pcoa_result <- readRDS(here::here("output/pcoa_result"))
 
@@ -249,14 +263,7 @@ loadings_axes_unfiltered
 
 # Plot PCoA ####
 # ── Society coordinates with metadata ────────────────────────────────────────
-coords_df <- as.data.frame(pcoa_result$vectors[, 1:10])
-colnames(coords_df) <- paste0("Ax", 1:10)
-coords_df$soc_id <- rownames(coords_df)
 
-coords_df <- coords_df %>%
-  left_join(societies %>% select(soc_id, pref_name_for_society, 
-                                 origLat, origLong),
-            by = "soc_id")
 
 additional_response_vars <- c("SCCS793", "SCCS794", "SCCS795", # (Ross: political participation)
                               "SCCS667", # Sanday, rape

@@ -71,10 +71,16 @@ gleeson_id <- read.csv(here::here("output/2026-03_SCCS_gleeson_id.csv"))
 dimorphism_vals <- gleeson_id %>%
   select(soc_id, height_ratio)
 
+dimorphism_vals %>% 
+  mutate(ratioMtF <- 1/height_ratio) %>% View
+
 # Join both to coords_df
 coords_extended <- coords_df %>%
   left_join(dimorphism_vals,  by = "soc_id")
 
+coords_extended %>% 
+  filter(!is.na(height_ratio)) %>% 
+  dim()
 # Are societies with height ratio data representative of the full PCoA space?
 has_size <- !is.na(coords_extended$height_ratio)
 plot(pcoa_result$vectors[, 1], pcoa_result$vectors[, 2],
