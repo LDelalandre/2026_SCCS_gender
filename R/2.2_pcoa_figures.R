@@ -140,10 +140,10 @@ interpret_axis <- function(ax, r2_min = r2_threshold, pct_min = pct_threshold){
   ) %>%
     mutate(pct_this_axis = r2_this_axis / r2_total * 100) %>%
     filter(r2_total >= r2_min, pct_this_axis >= pct_min) %>%
-    left_join(whyte_vars %>% select(var_id_whyte, title, domain),
+    left_join(whyte_vars %>% select(var_id_whyte, title, category1, category2),
               by = c("variable" = "var_id_whyte")) %>%
     arrange(desc(abs(loading))) %>%
-    select(variable, title, domain, loading, r2_total, pct_this_axis) %>%
+    select(variable, title, category1, category2, loading, r2_total, pct_this_axis) %>%
     mutate(across(where(is.numeric), round, 2))
 }
 
@@ -158,9 +158,9 @@ all_axes_table <- map_dfr(1:10, function(ax){
 all_axes_table %>%
   kable(
     caption   = "Variable loadings across PCoA axes",
-    col.names = c("PCo", "Variable", "Title", "Domain", 
+    col.names = c("PCo", "Variable", "Title", "Category1" , "Category2", 
                   "Loading", "R² total", "% this axis"),
-    align     = c("c", "l", "l", "l", "r", "r", "r")
+    align     = c("c", "l", "l", "l", "l", "r", "r", "r")
   ) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
@@ -168,7 +168,7 @@ all_axes_table %>%
     position          = "left"
   ) %>%
   column_spec(3, width = "8cm") %>%
-  column_spec(5, 
+  column_spec(6, 
               color = ifelse(all_axes_table$loading > 0, 
                              "#1a7a1a", "#cc0000"), 
               bold  = TRUE) %>%
