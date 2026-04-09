@@ -16,7 +16,7 @@ whyte_vars_to_remove <- c("DV34") # locality
 
 whyte_vars <- gender_response %>% 
   filter(column_number_whyte78 %in% rep(1:52)) %>% 
-  select(var_id, title,var_id_whyte, column_number_whyte78, category1, category2, domain, domain_name) %>%
+  select(var_id, title,var_id_whyte, column_number_whyte78, category1, category2, domain, domain_name, title_shortened) %>%
   mutate(short_title = paste0(var_id, "_", str_trunc(title, width = 30, ellipsis = "..."))) %>% 
   mutate(title = if_else(var_id == "SCCS625", paste("(No)", title), title)) %>%  # high = no high value on men being agressive
   filter(!var_id_whyte %in% whyte_vars_to_remove) # Remove locality
@@ -24,7 +24,7 @@ whyte_vars <- gender_response %>%
 # Categories of variables
 whyte_category <- whyte_vars %>% 
   arrange(category1, category2) %>% 
-  select(var_id, var_id_whyte, category1, category2, title) %>% 
+  select(var_id, var_id_whyte, category1, category2, title, title_shortened) %>% 
   mutate(category = 
            case_when(category1 == "role" & category2 %in% c("rituals", "sexual") ~ "role_symbolic",
                      category1 == "role" & category2 %in% c("subsistence", "warfare") ~ "role_material",
