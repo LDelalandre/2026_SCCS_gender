@@ -14,8 +14,6 @@ coords_df <- coords_df %>%
 
 
 ## Scree plot ####
-pcoa_result <- readRDS(here::here("output/pcoa_result"))
-
 eigenvalues       <- pcoa_result$values$Eigenvalues
 pos_eigen         <- eigenvalues[eigenvalues > 0]
 # NB: negative eigenvalues represent distortion or misfit in the distance matrix — the degree to which your dissimilarity metric violates Euclidean geometry. 

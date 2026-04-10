@@ -35,7 +35,7 @@ var_loadings <- cor(
             by = "var_id_whyte")
 
 
-# Join direction to variable loadings
+# Change the sign of the loading if it was coded as high = bad for women
 var_loadings_corrected <- var_loadings %>%
   left_join(direction_table, by = "var_id") %>%
   mutate(across(
@@ -43,19 +43,19 @@ var_loadings_corrected <- var_loadings %>%
     ~ . * women_favorable
   ))
 
-var_loadings_corrected <- var_loadings_corrected %>%
-  mutate(title_short = case_when(
-    str_detect(title, "Solely by Men")   ~ "Control fruits: men's labour",
-    str_detect(title, "by Men and Women")   ~ "Control fruits: joint labour",
-    str_detect(title, "Solely by Women") ~ "Control fruits: women's labour",
-    str_detect(title, "Final Authority.*Infant") ~ "Authority: infants",
-    str_detect(title, "Final Authority.*Post") ~ "Authority: older children",
-    str_detect(title, "Double Standard.*Premarital") ~ "No double standard: premarital sex",
-    str_detect(title, "Double Standard.*Extramarital") ~ "No double standard: extramarital sex",
-    str_detect(title, "Explicitly Male Work") ~ "Male work groups",
-    str_detect(title, "Explicitly Female Work") ~ "Female work groups",
-    TRUE ~ str_trunc(title, 45)
-  ))
+# var_loadings_corrected <- var_loadings_corrected %>%
+#   mutate(title_short = case_when(
+#     str_detect(title, "Solely by Men")   ~ "Control fruits: men's labour",
+#     str_detect(title, "by Men and Women")   ~ "Control fruits: joint labour",
+#     str_detect(title, "Solely by Women") ~ "Control fruits: women's labour",
+#     str_detect(title, "Final Authority.*Infant") ~ "Authority: infants",
+#     str_detect(title, "Final Authority.*Post") ~ "Authority: older children",
+#     str_detect(title, "Double Standard.*Premarital") ~ "No double standard: premarital sex",
+#     str_detect(title, "Double Standard.*Extramarital") ~ "No double standard: extramarital sex",
+#     str_detect(title, "Explicitly Male Work") ~ "Male work groups",
+#     str_detect(title, "Explicitly Female Work") ~ "Female work groups",
+#     TRUE ~ str_trunc(title, 45)
+#   ))
 
 
 var_loadings_corrected %>%
@@ -96,7 +96,7 @@ axis_category_summary %>%
   select(-c(mean_abs_loading, sd_loading, n)) %>%  
   pivot_wider(names_from = axis, values_from = mean_loading)
 
-axis_category_summary %>%
+corplot_axes_category <- axis_category_summary %>%
   filter(axis %in% paste0("Axis.", 1:6)) %>%
   ggplot(aes(x = axis, y = category, fill = mean_loading)) +
   geom_tile(color = "white", linewidth = 0.5) +
@@ -115,6 +115,9 @@ axis_category_summary %>%
        title = "Mean signed loading by category and axis",
        subtitle = "Positive = female-favorable pole; Negative = male-dominant pole")
 
+ggsave("output/2026-04-08_pcoa_category_corplot_axes_category.png", corplot_axes_category,
+       width = 6, height = 4)
+
 
 var_order <- var_loadings_corrected %>%
   left_join(whyte_vars %>% select(var_id_whyte, category2),
@@ -127,7 +130,7 @@ var_order <- var_loadings_corrected %>%
 vars_plot <- var_loadings_corrected %>%
   left_join(whyte_vars %>% select(var_id_whyte, category2),
             by = "var_id_whyte") %>%
-  pivot_longer(cols = c(Axis.1, Axis.2, Axis.4),
+  pivot_longer(cols = c(Axis.1, Axis.2, Axis.3, Axis.4),
                names_to = "axis",
                values_to = "loading") %>%
   filter(!is.na(loading)) %>%
@@ -155,6 +158,18 @@ category_colors <- c(
   "role_material"   = "#E78AC3",
   "role_symbolic"   = "#A6D854"
 )
+
+legend_plot <- ggplot(
+  data.frame(category = names(category_colors)),
+  aes(x = 1, y = category, fill = category)
+) +
+  geom_tile() +
+  scale_fill_manual(values = category_colors) +
+  theme(legend.position = "right")
+
+standalone_legend <- cowplot::get_legend(legend_plot)
+
+cowplot::plot_grid(standalone_legend)
 
 # Step 2: for each label in y axis order, what color should it be?
 # ggplot draws y axis from bottom to top = factor levels in order
@@ -189,9 +204,11 @@ loadings_plot <- ggplot(vars_plot, aes(x = loading,
   ) +
   labs(x = "Loading (corrected for coding direction)", y = NULL)
 
+loadings_plot2 <- cowplot::plot_grid(standalone_legend,
+                   loadings_plot + theme(legend.position = "none"),
+                   rel_widths = c(0.2, 1))
 
-loadings_plot
 
-ggsave("output/2026-04-08_pcoa_category_loadings_plot.png", loadings_plot,
-       width = 9, height = 6)
+ggsave("output/2026-04-08_pcoa_category_loadings_plot.png", loadings_plot2,
+       width = 11, height = 6)
 
