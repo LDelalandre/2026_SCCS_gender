@@ -22,6 +22,10 @@ write.csv(max_code_descriptions, "output/2026-04-08_pcoa_category_max_code_descr
 direction_table <- read.csv("output/2026-04-08_pcoa_category_max_code_descriptions_edited.csv") %>% 
   select(var_id, women_favorable)
 
+gender_response %>% 
+  left_join(direction_table, by =c("var_id", "title")) %>% 
+  write.csv(here::here("data/SCCS/gender_response_variables_recode.csv"))
+
 # Correlate original variables with society PCoA scores
 # This gives you loadings: how much each variable contributes to each axis
 var_loadings <- cor(

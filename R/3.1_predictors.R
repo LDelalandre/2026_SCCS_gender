@@ -10,8 +10,7 @@ whyte_societies <- sccs %>%
 
 # Define predictors ####
 
-predictors_putative <- gender_response %>%
-  filter(type != "response") %>% 
+predictors_putative <- gender_predictors %>% 
   select(var_id, title) %>% 
   left_join(variables) 
 

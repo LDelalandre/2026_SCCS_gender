@@ -499,7 +499,7 @@ var_order <- var_loadings_corrected %>%
 vars_plot <- var_loadings_corrected %>%
   left_join(whyte_vars %>% select(var_id_whyte, category2),
             by = "var_id_whyte") %>%
-  pivot_longer(cols = c(Axis.1, Axis.2, Axis.3, Axis.4),
+  pivot_longer(cols = c(Axis.1, Axis.2, Axis.3, Axis.4, Axis.5, Axis.6, Axis.7, Axis.8),
                names_to = "axis",
                values_to = "loading") %>%
   filter(!is.na(loading)) %>%
@@ -517,7 +517,7 @@ vars_plot <- var_loadings_corrected %>%
 
 
 
-# Plot ####
+# Loadings plot ####
 
 # Step 1: define colors once
 category_colors <- c(
@@ -579,6 +579,9 @@ loadings_plot2 <- cowplot::plot_grid(standalone_legend,
 
 
 ggsave("output/2026-04-08_pcoa_category_loadings_plot.png", loadings_plot2,
-       width = 11, height = 6)
+       width = 17, height = 6)
 
+
+
+# Data for Angarika to look at ####
 

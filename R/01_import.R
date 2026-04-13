@@ -19,6 +19,8 @@ gleeson <- read.csv(here::here("data/gleesonFemaleStatusFood2018.csv")) %>%  # h
 
 gender_response <- read.csv(here::here("data/SCCS/gender_response_variables.csv"))
 
+gender_predictors <- read.csv("data/SCCS/gender_predictor_variables.csv")
+
 
 ### Predictor variables ####
 
