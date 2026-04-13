@@ -2,6 +2,9 @@ library(tidybayes)
 library(ggplot2)
 library(patchwork)
 
+m_axis1 <- readRDS(here::here("output/models/m_axis1"))
+m_axis2 <- readRDS(here::here("output/models/m_axis2"))
+
 # 1. POSTERIOR DISTRIBUTIONS
 # clean coefficient plot with tidybayes
 m_axis1 %>%

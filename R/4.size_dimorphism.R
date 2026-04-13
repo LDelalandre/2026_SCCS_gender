@@ -72,7 +72,7 @@ dimorphism_vals <- gleeson_id %>%
   select(soc_id, height_ratio)
 
 dimorphism_vals %>% 
-  mutate(ratioMtF <- 1/height_ratio) %>% View
+  mutate(ratioMtF <- 1/height_ratio) 
 
 # Join both to coords_df
 coords_extended <- coords_df %>%
@@ -104,14 +104,14 @@ coords_extended %>%
 
 
 
-# Model ####
+# Model domination size ####
 
 library(brms)
 
 run_model <- F
 
 if (run_model == T){
-  mod_sc_size <- brm(
+  mod_domination_size <- brm(
     height_ratio ~ Ax1 + (1|region),
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
@@ -122,17 +122,17 @@ if (run_model == T){
     cores = 4, iter = 4000, seed = 42,
     control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
   )
-  saveRDS(mod_sc_size, here::here("output/2026-03-19_whyte_mod_sc_size.rds"))
+  saveRDS(mod_domination_size, here::here("output/2026-03-19_whyte_mod_domination_size.rds"))
 }
 
 
-mod_sc_size <- readRDS(here::here("output/2026-03-19_whyte_mod_sc_size.rds"))
+mod_domination_size <- readRDS(here::here("output/2026-03-19_whyte_mod_domination_size.rds"))
 
 
-mod_sc_size %>% summary()
+mod_domination_size %>% summary()
 
 coords_extended %>%
-  tidybayes::add_epred_draws(mod_sc_size, ndraws = 100) %>%
+  tidybayes::add_epred_draws(mod_domination_size, ndraws = 100) %>%
   ggplot(aes(x = Ax1, y = height_ratio)) +
   tidybayes::stat_lineribbon(aes(y = .epred), 
                              .width = c(0.5, 0.95), 
@@ -148,3 +148,133 @@ coords_extended %>%
   geom_point() +
   theme_classic() +
   facet_wrap(~region)
+
+
+# Model complexity size ####
+
+# TODO: compute complexity for all of Gleeson's data points!!
+# TODO: add control on region?
+
+pred_resp_dimorphism <- coords_extended %>% 
+  left_join(pred_resp, by = "soc_id") %>% 
+  filter(!is.na(complexity)) 
+
+pred_resp_dimorphism %>% 
+  ggplot(aes(x = complexity, y = height_ratio)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+
+run_model <- F
+
+if (run_model == T){
+  mod_complexity_size <- brm(
+    height_ratio ~ complexity + (1|region),
+    family = gaussian(),
+    prior = c(prior(normal(0, 0.5), class = b),
+              prior(normal(0, 0.5), class = Intercept),
+              prior(exponential(1), class = sd),
+              prior(exponential(1), class = sigma)),
+    data = pred_resp_dimorphism,
+    cores = 4, iter = 4000, seed = 42,
+    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
+  )
+  saveRDS(mod_complexity_size, here::here("output/2026-03-19_whyte_mod_complexity_size.rds"))
+}
+
+
+mod_complexity_size <- readRDS(here::here("output/2026-03-19_whyte_mod_complexity_size.rds"))
+
+
+mod_complexity_size %>% summary()
+
+pred_resp_dimorphism %>%
+  tidybayes::add_epred_draws(mod_complexity_size, ndraws = 100) %>%
+  ggplot(aes(x = complexity, y = height_ratio)) +
+  tidybayes::stat_lineribbon(aes(y = .epred), 
+                             .width = c(0.5, 0.95), 
+                             alpha = 0.3, 
+                             fill = "steelblue") +
+  geom_point() +
+  labs(x = "Complexity", y = "Height ratio") +
+  theme_classic()
+
+
+# Basic PPC - most informative first look
+pp_check(mod_complexity_size, ndraws = 100)
+
+# Check the mean
+pp_check(mod_complexity_size, type = "stat", stat = "mean", ndraws = 1000)
+
+# Check mean AND sd jointly
+pp_check(mod_complexity_size, type = "stat_2d", ndraws = 1000)
+
+# Check for outliers / tail behaviour
+pp_check(mod_complexity_size, type = "scatter_avg")
+
+
+
+# mod_no_region <- brm(
+#   height_ratio ~ complexity,
+#   family = gaussian(),
+#   prior = c(prior(normal(0, 0.5), class = b),
+#             prior(normal(0, 0.5), class = Intercept),
+#             prior(exponential(1), class = sigma)),
+#   data = pred_resp_dimorphism,
+#   cores = 4, iter = 4000, seed = 42
+# )
+# 
+# loo_region    <- loo(mod_complexity_size)
+# loo_no_region <- loo(mod_no_region)
+# 
+# loo_compare(loo_region, loo_no_region)
+# The LOO favors mod_no_region marginally, but the difference (−1.0 ± 0.8) is well within 1 SE — so the models are indistinguishable predictively.
+
+
+
+# Model mediation ####
+
+run_model <- F
+
+if (run_model == T){
+  mod_mediation <- brm(
+    bf(height_ratio ~ Ax1 + complexity + (1 | region)) +
+      bf(Ax1 ~ complexity + herding_importance + mo(matri_cat) + hunting) +
+      set_rescor(FALSE),
+    family = gaussian(),
+    prior = c(
+      # height_ratio equation
+      prior(normal(0, 0.5), class = b, resp = heightratio),
+      prior(normal(0, 0.5), class = Intercept, resp = heightratio),
+      prior(exponential(1), class = sigma, resp = heightratio),
+      prior(exponential(1), class = sd, resp = heightratio),
+      # Ax1 equation
+      prior(normal(0, 0.5), class = b, resp = Ax1),
+      prior(normal(0, 0.5), class = Intercept, resp = Ax1),
+      prior(exponential(1), class = sigma, resp = Ax1)
+    ),
+    data = pred_resp_dimorphism,  # needs all variables in one dataframe
+    cores = 4, iter = 4000, seed = 42,
+    control = list(adapt_delta = 0.99)
+  )
+  saveRDS(mod_mediation, here::here("output/2026-03-19_whyte_mod_mediation.rds"))
+}
+
+
+mod_mediation <- readRDS(here::here("output/2026-03-19_whyte_mod_mediation.rds"))
+
+summary(mod_mediation)
+post <- as_draws_df(mod_mediation) # these are the posterior distributions
+
+# indirect effect = a path × b path
+post$indirect <- post$b_heightratio_Ax1 * post$b_Ax1_complexity
+
+# direct effect
+post$direct <- post$b_heightratio_complexity
+
+# total effect
+post$total <- post$indirect + post$direct
+
+# summarise: Bayesian credible interval (CI) table
+posterior::summarise_draws(post[, c("indirect", "direct", "total")],
+                           mean, sd, ~quantile(.x, probs = c(0.025, 0.975)))

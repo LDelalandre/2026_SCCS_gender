@@ -72,7 +72,7 @@ site_scores$society <- rownames(site_scores)
 # site_scores <- left_join(site_scores, your_metadata, by = "society")
 
 # Plot
-ggplot() +
+db_rda_biplot <- ggplot() +
   # societies
   geom_point(data = site_scores,
              aes(x = CAP1, y = CAP2), alpha = 0.6, size = 2) +
@@ -88,6 +88,8 @@ ggplot() +
   theme_bw() +
   labs(title = "db-RDA biplot",
        x = "CAP1", y = "CAP2")
+
+ggsave("output/3.4_db-rda_db_rda_biplot.png", db_rda_biplot)
 
 
 # Profiles ####
@@ -175,21 +177,6 @@ scores_wide <- scores_wide %>%
   )
 
 ## Boxplot categories ~ predictors ####
-scores_wide %>%
-  filter(!is.na(category)) %>%
-  pivot_longer(cols = c(complexity, matri, herding_importance),
-               names_to = "predictor",
-               values_to = "correlation") %>%
-  ggplot(aes(x = category, y = correlation, fill = predictor)) +
-  geom_boxplot(alpha = 0.7) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  facet_wrap(~ predictor) +
-  coord_flip() +
-  theme_bw() +
-  labs(x = NULL, 
-       y = "Correlation with predictor-constrained axis",
-       title = "Which domains does each predictor affect?") +
-  geom_point()
 
 ## Boxplot categories ~ predictors colored ####
 category_order <- c("domination", "power", "role_material", "role_symbolic", "sexual_autonomy")
@@ -202,7 +189,7 @@ category_colors <- c(
   "role_symbolic"   = "#A6D854"
 )
 
-scores_wide %>%
+db_rda_boxplot <- scores_wide %>%
   filter(!is.na(category)) %>%
   mutate(category = factor(category, levels = rev(category_order))) %>%
   pivot_longer(cols = c(complexity, matri, herding_importance),
@@ -225,6 +212,7 @@ scores_wide %>%
        y = "Correlation with predictor-constrained axis",
        title = "Which domains does each predictor affect?")
 
+ggsave("output/3.4_db-rda_db_rda_boxplot.png", db_rda_boxplot)
 
 # Loadings of variables ####
 
@@ -293,7 +281,7 @@ dbrda_loadings_plot2 <- cowplot::plot_grid(
   rel_widths = c(0.2, 1)
 )
 
-ggsave("output/2026-04-08_dbrda_predictor_loadings_plot.png",
+ggsave("output/3.4_db-rda_predictor_loadings_plot.png",
        dbrda_loadings_plot2,
        width = 9, height = 6)
 
