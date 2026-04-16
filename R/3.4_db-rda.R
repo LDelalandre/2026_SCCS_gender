@@ -10,6 +10,8 @@ predictors <- pred_resp %>%
          warfare_intensity, warfare_location, matri) %>%
   as.data.frame()
 
+direction_table <- gender_response_recode %>% 
+  select(var_id, women_favorable)
 
 complete_idx <- complete.cases(predictors) # db-RDA requires complete cases in predictors
 cat("Complete cases:", sum(complete_idx), "out of", nrow(predictors), "\n")

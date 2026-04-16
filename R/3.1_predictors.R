@@ -69,7 +69,8 @@ write.csv(predictors_detailed, here::here("output/03_predictors_predictors_detai
 predictors_detailed <- read.csv("output/03_predictors_predictors_detailed.csv") %>% 
   mutate(category = case_when(title == "Plow" ~ "complexity",
                               title == "Irrigation" ~ "complexity",
-                              TRUE ~ category))
+                              TRUE ~ category)) 
+  # mutate(category = if_else(category == "agriculture", "complexity",category))
   # mutate(category = case_when(category == "agriculture" ~ "complexity", 
   #                             category == "herding" ~ "complexity", 
   #                             category == "hunting" ~ "complexity", 
@@ -226,7 +227,7 @@ get_loadings <- function(cat, n_axes = 3) {
     )
 }
 
-get_loadings("agriculture",     n_axes = 4) %>% print(n = 31)
+get_loadings("complexity",     n_axes = 4) %>% print(n = 31)
 
 
 

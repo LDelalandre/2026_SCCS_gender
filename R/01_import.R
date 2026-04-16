@@ -18,8 +18,10 @@ gleeson <- read.csv(here::here("data/gleesonFemaleStatusFood2018.csv")) %>%  # h
   mutate(society_name = str_replace(society_name, "\\*", ""))
 
 gender_response <- read.csv(here::here("data/SCCS/gender_response_variables.csv"))
+gender_response_recode <- read.csv(here::here("data/SCCS/gender_response_variables_recode.csv"))
 
 gender_predictors <- read.csv("data/SCCS/gender_predictor_variables.csv")
+
 
 
 ### Predictor variables ####

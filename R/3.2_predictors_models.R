@@ -51,7 +51,7 @@ run_models <- F
 
 if (run_models){
   m_axis1 <- brm(Axis.1 ~ complexity + 
-                   herding_importance + 
+                   herding_importance +
                    mo(matri_cat) + 
                    hunting,
                  data = pred_resp,
