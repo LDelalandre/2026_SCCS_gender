@@ -61,6 +61,12 @@ predictors_detailed <- predictors %>%
 
 write.csv(predictors_detailed, here::here("output/03_predictors_predictors_detailed.csv"), row.names = F) 
 
+# see the codes
+
+codes %>% 
+  filter(var_id %in% predictors_detailed$var_id) %>% 
+  View
+  
 
 # PCoA on categories ####
 
