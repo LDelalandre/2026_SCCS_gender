@@ -73,8 +73,9 @@ codes %>%
 ## Coverage ####
 
 predictors_detailed <- read.csv("output/03_predictors_predictors_detailed.csv") %>% 
-  mutate(category = case_when(title == "Plow" ~ "complexity",
-                              title == "Irrigation" ~ "complexity",
+  mutate(category = case_when(title == "Plow" ~ "guttman",
+                              title == "Irrigation" ~ "guttman",
+                              title == "True Weaving" ~ "guttman",
                               TRUE ~ category)) 
   # mutate(category = if_else(category == "agriculture", "complexity",category))
   # mutate(category = case_when(category == "agriculture" ~ "complexity", 
@@ -157,6 +158,7 @@ categories <- split(predictors_detailed$var_id, predictors_detailed$category)
 
 categories[["symbolic"]] <- NULL
 categories[["extended_families"]] <- NULL
+categories[["guttman"]] <- NULL
 cat_results <- lapply(names(categories), function(cat) {
   run_category_pcoa(categories[[cat]], cat)
 })
