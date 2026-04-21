@@ -11,7 +11,7 @@ whyte_societies <- sccs %>%
 # Define predictors ####
 
 predictors_putative <- gender_predictors %>% 
-  select(var_id, title) %>% 
+  dplyr::select(var_id, title) %>% 
   left_join(variables) 
 
 write.csv(predictors_putative, here::here("output/03_predictors_predictors_putative.csv"))
@@ -21,7 +21,7 @@ write.csv(predictors_putative, here::here("output/03_predictors_predictors_putat
 predictors_putative <- read.csv(here::here("output/03_predictors_predictors_putative_edited.csv")) %>% 
   filter(category != "") %>% 
   filter(predictor !="no") %>% 
-  select(var_id, category)
+  dplyr::select(var_id, category)
 
 predictors_additional_id <- c(
   # WARFARE
@@ -49,7 +49,7 @@ predictors <- bind_rows(predictors_putative, predictors_additional) %>%
   filter(!category == "method")
 
 predictors_detailed <- predictors %>% 
-  left_join(variables %>% select(var_id, title)) %>% 
+  left_join(variables %>% dplyr::select(var_id, title)) %>% 
   arrange(category) %>% 
   filter(!var_id == "SCCS693") %>%  # remove Whyte's binary code
   filter(!var_id %in% c("SCCS688", "SCCS689")) %>%  # REMOVED post-european contact husbandry
@@ -73,16 +73,33 @@ codes %>%
 ## Coverage ####
 
 predictors_detailed <- read.csv("output/03_predictors_predictors_detailed.csv") %>% 
-  mutate(category = case_when(title == "Plow" ~ "guttman",
-                              title == "Irrigation" ~ "guttman",
-                              title == "True Weaving" ~ "guttman",
-                              TRUE ~ category)) 
-  # mutate(category = if_else(category == "agriculture", "complexity",category))
-  # mutate(category = case_when(category == "agriculture" ~ "complexity", 
-  #                             category == "herding" ~ "complexity", 
-  #                             category == "hunting" ~ "complexity", 
-  #                             category == "warfare" ~ "complexity", 
-  #                             TRUE ~ category))
+  mutate(category = case_when(
+    
+    # Guttman scale technologies
+    title == "Plow"         ~ "guttman",
+    title == "Irrigation"   ~ "guttman",
+    title == "True Weaving" ~ "guttman",
+    
+    # # Upstream complexity — material and technological
+    # var_id == "SCCS704" ~ "complexity_upstream",  # private property
+    # var_id == "SCCS705" ~ "complexity_upstream",  # settlement type
+    # var_id == "SCCS732" ~ "complexity_upstream",  # trade importance
+    # var_id == "SCCS706" ~ "complexity_upstream",  # metalworking
+    # var_id == "SCCS707" ~ "complexity_upstream",  # pottery
+    # var_id == "SCCS711" ~ "complexity_upstream",  # societal complexity Guttman
+    # 
+    # # Downstream complexity — political and organisational
+    # var_id == "SCCS699" ~ "complexity_downstream",  # political organisation
+    # var_id == "SCCS700" ~ "complexity_downstream",  # crimes punished
+    # var_id == "SCCS701" ~ "complexity_downstream",  # full-time bureaucrats
+    # var_id == "SCCS702" ~ "complexity_downstream",  # part of kingdom
+    # var_id == "SCCS703" ~ "complexity_downstream",  # kingdom in past
+    # var_id == "SCCS709" ~ "complexity_downstream",  # stratification larger
+    # var_id == "SCCS710" ~ "complexity_downstream",  # stratification local
+    
+    TRUE ~ category
+  ))
+
 
 predictors_data <- sccs %>% 
   filter(var_id %in% predictors_detailed$var_id) 
@@ -95,7 +112,7 @@ coverage_by_cat <- predictors_data %>%
     coverage = round(mean(!is.na(code)), 3),
     .groups  = "drop"
   ) %>%
-  left_join(predictors_detailed %>% select(var_id, title, category), 
+  left_join(predictors_detailed %>% dplyr::select(var_id, title, category), 
             by = "var_id") %>%
   arrange(category, desc(coverage))
 
@@ -105,7 +122,7 @@ print(coverage_by_cat)
 # assumes predictors_data has columns: soc_id, var_id, value
 
 predictors_wide0 <- predictors_data %>%
-  select(soc_id, var_id, code) %>%
+  dplyr::select(soc_id, var_id, code) %>%
   tidyr::pivot_wider(names_from = var_id, values_from = code) %>%
   tibble::column_to_rownames("soc_id") %>% 
   mutate(# WARFARE
@@ -113,7 +130,7 @@ predictors_wide0 <- predictors_data %>%
     SCCS1650 = log(1+SCCS1650)) 
 
 predictors_wide <- predictors_wide0 %>% 
-  select(-SCCS676) # creation stories, just one variable, no pcoa to do
+  dplyr::select(-SCCS676) # creation stories, just one variable, no pcoa to do
 
 
 # align to the same societies as your response PCoA
@@ -217,14 +234,14 @@ get_loadings <- function(cat, n_axes = 3) {
   
   axes_df <- cat_results[[cat]]$pcoa$vectors %>%
     as.data.frame() %>%
-    select(1:n_axes) %>%
+    dplyr::select(1:n_axes) %>%
     setNames(axis_names) %>%
     tibble::rownames_to_column("soc_id")
   
   predictors_data %>%
     filter(var_id %in% categories[[cat]]) %>%
     filter(soc_id %in% soc_ids) %>%
-    left_join(predictors_detailed %>% select(var_id, title), by = "var_id") %>%
+    left_join(predictors_detailed %>% dplyr::select(var_id, title), by = "var_id") %>%
     left_join(axes_df, by = "soc_id") %>%
     group_by(title) %>%
     summarise(
@@ -238,47 +255,61 @@ get_loadings <- function(cat, n_axes = 3) {
 get_loadings("complexity",     n_axes = 4) %>% print(n = 31)
 
 
-
 # Extract predictors per category ####
+
+# complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
+#   as.data.frame() %>%
+#   dplyr::select(complexity = Axis.1) %>% # positive = complex
+#   tibble::rownames_to_column("soc_id")
+
+# complexity_upstream <- cat_results[["complexity_upstream"]]$pcoa$vectors %>%
+#   as.data.frame() %>%
+#   dplyr::select(complexity_upstream = Axis.1) %>% # positive = complex
+#   tibble::rownames_to_column("soc_id")
+
+# complexity_downstream <- cat_results[["complexity_downstream"]]$pcoa$vectors %>%
+#   as.data.frame() %>%
+#   dplyr::select(complexity_downstream = Axis.1) %>% # positive = complex
+#   tibble::rownames_to_column("soc_id")
 
 complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  select(complexity = Axis.1) %>% # positive = complex
+  dplyr::select(complexity_downstream = Axis.1) %>% # positive = complex
   tibble::rownames_to_column("soc_id")
 
 hunting <- cat_results[["hunting"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  select(hunting = Axis.1) %>% # positive = hunting important
+  dplyr::select(hunting = Axis.1) %>% # positive = hunting important
   tibble::rownames_to_column("soc_id")
 
 agriculture <- cat_results[["agriculture"]]$pcoa$vectors %>%
   as.data.frame() %>%
   mutate(Axis.2 = - Axis.2) %>% 
-  select(agriculture_cereals = Axis.1, agriculture_importance = Axis.2) %>% # importance positive = much agri (and cereal positive = rely mostly on cereals)
+  dplyr::select(agriculture_cereals = Axis.1, agriculture_importance = Axis.2) %>% # importance positive = much agri (and cereal positive = rely mostly on cereals)
   tibble::rownames_to_column("soc_id")
 
 herding <- cat_results[["herding"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  select(herding_importance = Axis.1, herding_milk = Axis.2) %>% # positive = importance for 1, milked for 2
+  dplyr::select(herding_importance = Axis.1, herding_milk = Axis.2) %>% # positive = importance for 1, milked for 2
   tibble::rownames_to_column("soc_id")
 
 warfare <- cat_results[["warfare"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  select(warfare_intensity = Axis.1, warfare_location = Axis.2) %>% # location positive = internal warfare
+  dplyr::select(warfare_intensity = Axis.1, warfare_location = Axis.2) %>% # location positive = internal warfare
   tibble::rownames_to_column("soc_id")
 
 kinship <- cat_results[["kinship"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  select(matri = Axis.1) %>% # positive = matrilineal/local
+  dplyr::select(matri = Axis.1) %>% # positive = matrilineal/local
   tibble::rownames_to_column("soc_id")
 
 creation_stories <- predictors_wide0 %>% 
-  select("SCCS676") %>% #creation stories, Sanday's variable
+  dplyr::select("SCCS676") %>% #creation stories, Sanday's variable
   rename(creation_stories = SCCS676) %>% # high value = male_dominated
   tibble::rownames_to_column("soc_id")
 
 fertility <- predictors_wide0 %>% 
-  select(SCCS45, SCCS240, SCCS1130) %>% 
+  dplyr::select(SCCS45, SCCS240, SCCS1130) %>% 
   rename(weaning = SCCS45,
          taboo = SCCS240,
          density = SCCS1130) %>% 
@@ -287,17 +318,27 @@ fertility <- predictors_wide0 %>%
 
 all_axes <- complexity %>%
   full_join(agriculture, by = "soc_id") %>%
-  full_join(herding,     by = "soc_id") %>% 
+  full_join(herding,     by = "soc_id") %>%
   full_join(hunting, by = "soc_id") %>%
-  full_join(warfare,     by = "soc_id") %>% 
+  full_join(warfare,     by = "soc_id") %>%
   full_join(kinship, by = "soc_id") %>%
-  left_join(creation_stories,     by = "soc_id") %>% 
-  left_join(fertility,     by = "soc_id") 
+  left_join(creation_stories,     by = "soc_id") %>%
+  left_join(fertility,     by = "soc_id")
+
+# all_axes <- complexity_upstream %>%
+#   full_join(complexity_downstream, by = "soc_id") %>%
+#   full_join(agriculture, by = "soc_id") %>%
+#   full_join(herding,     by = "soc_id") %>% 
+#   full_join(hunting, by = "soc_id") %>%
+#   full_join(warfare,     by = "soc_id") %>% 
+#   full_join(kinship, by = "soc_id") %>%
+#   left_join(creation_stories,     by = "soc_id") %>% 
+#   left_join(fertility,     by = "soc_id") 
 
 
 # Correlations among predictors 
 library(corrplot)
-predictors_selected <- all_axes %>% select(-soc_id)
+predictors_selected <- all_axes %>% dplyr::select(-soc_id)
 cor(predictors_selected, use = "pairwise.complete.obs") %>%
   corrplot(method = "number")
 
@@ -329,7 +370,7 @@ map_dfr(predictors, ~{
     broom::tidy() %>%
     mutate(predictor = .x)
 }) %>%
-  select(predictor, estimate, p.value) %>%
+  dplyr::select(predictor, estimate, p.value) %>%
   arrange(p.value)
 
 dropped <- c("weaning", "taboo", "creation_stories", "density")
@@ -341,7 +382,7 @@ map_dfr(dropped, ~{
     broom::tidy() %>%
     mutate(predictor = .x)
 }) %>%
-  select(predictor, estimate, p.value) %>%
+  dplyr::select(predictor, estimate, p.value) %>%
   mutate(p.adjusted = p.adjust(p.value, method = "BH")) %>%
   arrange(p.value)
 

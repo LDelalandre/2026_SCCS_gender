@@ -5,7 +5,7 @@ colnames(coords_df) <- paste0("Ax", 1:10)
 coords_df$soc_id <- rownames(coords_df)
 
 coords_df <- coords_df %>%
-  left_join(societies %>% select(soc_id, pref_name_for_society, 
+  left_join(societies %>% dplyr::select(soc_id, pref_name_for_society, 
                                  origLat, origLong),
             by = "soc_id")
 
@@ -39,7 +39,7 @@ library(tidyverse)
 
 # Pivot the SCCS variables wide and join to coords_df
 model_data <- class_data %>%
-  select(soc_id, var_id, code) %>%
+  dplyr::select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code) %>%
   right_join(coords_df, by = "soc_id") %>%
   right_join(pred_resp, by = "soc_id")
@@ -116,7 +116,7 @@ library(tidyverse)
 guttman_seq <- c("SCCS707", "SCCS706", "SCCS708", "SCCS681", "SCCS680")
 
 model_data_complete <- model_data %>% 
-  select(Ax1, all_of(guttman_seq)) %>% 
+  dplyr::select(Ax1, all_of(guttman_seq)) %>% 
   drop_na()
 
 # Then refit m0-m5 using data = model_data_complete
@@ -229,7 +229,7 @@ guttman_items <- c("SCCS707", "SCCS706", "SCCS708", "SCCS681", "SCCS680")
 
 # First, recode to binary presence/absence (assuming 2 = present, 1 = absent)
 guttman_data <- model_data %>%
-  select(soc_id, all_of(guttman_items)) %>%
+  dplyr::select(soc_id, all_of(guttman_items)) %>%
   mutate(across(all_of(guttman_items), ~ case_when(
     . == 2 ~ 1,
     . == 1 ~ 0,
@@ -258,7 +258,7 @@ guttman_data <- guttman_data %>%
 # Check the pattern of responses per score
 # In a perfect scale, score 1 = pottery only, score 2 = pottery+metalworking, etc.
 guttman_data %>%
-  select(pottery:plow, guttman_score) %>%
+  dplyr::select(pottery:plow, guttman_score) %>%
   arrange(guttman_score) %>%
   print(n = Inf)
 
@@ -267,7 +267,7 @@ guttman_data %>%
 # An error = having a harder item without an easier one
 
 compute_cs <- function(df, items) {
-  df_complete <- df %>% select(all_of(items)) %>% drop_na()
+  df_complete <- df %>% dplyr::select(all_of(items)) %>% drop_na()
   n <- nrow(df_complete)
   k <- length(items)
   
@@ -336,7 +336,11 @@ guttman_data <- guttman_data %>%
   )
 
 model_data <- model_data %>%
-  left_join(guttman_data %>% select(soc_id, guttman_3), by = "soc_id")
+  left_join(guttman_data %>% dplyr::select(soc_id, guttman_3), by = "soc_id")
+
+model_data_all <- model_data %>%
+  left_join(predictors_wide %>% rownames_to_column("soc_id"), by = "soc_id") %>% 
+  left_join(whyte_data_wide, by = "soc_id")
 
 summary(lm(Ax1 ~ guttman_3, data = model_data))
 
@@ -423,9 +427,7 @@ ggdag(dag_full) + theme_dag()
 
 
 ## Herding ####
-model_data_all <- model_data %>%
-  left_join(predictors_wide %>% rownames_to_column("soc_id"), by = "soc_id") %>% 
-  left_join(whyte_data_wide, by = "soc_id")
+
 
 model_data_all %>% 
   group_by(herding_importance) %>%
@@ -435,7 +437,7 @@ model_data_all %>%
   ) %>% print(n = 48)
 
 # Does herding predict Ax1 independently of guttman_3?
-summary(lm(Ax1 ~ guttman_3 + herding_importance, data = model_data))
+summary(lm(Ax1 ~ <- + herding_importance, data = model_data))
 
 # Are herding and guttman_3 correlated?
 cor(model_data$herding_importance, model_data$guttman_3, 
@@ -642,7 +644,7 @@ plot(dag_A_revised)
 plot(dag_B_revised)
 plot(dag_C_revised)
 
-impliedConditionalIndependencies(dag_A_revised)
+  impliedConditionalIndependencies(dag_A_revised)
 impliedConditionalIndependencies(dag_B_revised)
 impliedConditionalIndependencies(dag_C_revised)
 
@@ -765,4 +767,130 @@ summary(med_result)
 # ACME = indirect, mediated effect. Exists if significant.
 # ADE = direct effect. Here, most of the effect is direct
 # Suggests that most of the effect is not mediated
+
+
+### Relation between complexity and guttman ####
+# Does complexity predict guttman_3 after subsistence variables?
+summary(lm(guttman_3 ~ complexity + agriculture_cereals + 
+             herding_importance, data = model_data_all))
+
+# Does guttman_3 predict complexity after subsistence variables?
+summary(lm(complexity ~ guttman_3 + agriculture_cereals + 
+             herding_importance, data = model_data_all))
+
+# As the agriculture and herding effect drop when complexity is a predictor,
+# I can put complexity upstream of guttman3
+
+### With complexity downstream ####
+
+
+# Does Ax1 predict complexity?
+summary(lm(complexity ~ Ax1, data = model_data_all))
+
+# Does Ax1 predict complexity after guttman_3?
+summary(lm(complexity ~ guttman_3 + Ax1, data = model_data_all))
+
+
+# Are these equivalent?
+dag_complexity_cause <- dagitty('dag {
+  guttman_3 -> complexity
+  guttman_3 -> Ax1
+}')
+
+dag_complexity_effect <- dagitty('dag {
+  guttman_3 -> Ax1
+  Ax1 -> complexity
+}')
+
+impliedConditionalIndependencies(dag_complexity_cause)
+impliedConditionalIndependencies(dag_complexity_effect)
+
+
+
+## Connect axis 1 and 2 ####
+
+#### From graph 1 to hunting ####
+summary(lm(hunting ~ agriculture_cereals, 
+           data = model_data_all))
+
+summary(lm(hunting ~ herding_importance, 
+           data = model_data_all))
+
+summary(lm(hunting ~ complexity, 
+           data = model_data_all))
+
+summary(lm(hunting ~ guttman_3, 
+           data = model_data_all))
+
+summary(lm(hunting ~ matri, 
+           data = model_data_all))
+
+summary(lm(hunting ~ Ax1, 
+           data = model_data_all))
+
+#### From graph 1 to agriculture_importance ####
+summary(lm(agriculture_importance ~ guttman_3, 
+           data = model_data_all))
+
+summary(lm(agriculture_importance ~ complexity, 
+           data = model_data_all))
+# Here, complexity is the best predictor!
+
+summary(lm(agriculture_importance ~ herding_importance, 
+           data = model_data_all))
+
+# Show that complexity predicts Ax2 once you control
+# for both hunting and agriculture_importance simultaneously
+summary(lm(Ax2 ~ complexity + hunting + agriculture_importance,
+           data = model_data_all))
+
+# And show the two pathways separately
+summary(lm(Ax2 ~ hunting, data = model_data_all))
+summary(lm(Ax2 ~ agriculture_importance, data = model_data_all))
+summary(lm(Ax2 ~ complexity, data = model_data_all))
+
+dag_Ax2_correct <- dagitty('dag {
+  ecology -> hunting
+  ecology -> agriculture_importance
+  ecology -> herding_importance
+  herding_importance -> hunting
+  agriculture_cereals -> hunting
+  complexity -> hunting
+  complexity -> agriculture_importance
+  hunting -> Ax2
+  agriculture_importance -> Ax2
+}')
+
+plot(dag_Ax2_correct)
+
+# From graph 1 to axis 2
+summary(lm(Ax2 ~ herding_importance, 
+           data = model_data_all))
+
+# Markov equivalent graphs ####
+equiv <- equivalentDAGs(dag_B_final)
+for (i in length(equiv)){
+  plot(equiv[[i]])
+}
+i <- 6
+plot(equiv[[i]])
+
+
+# Creation stories, warfare ####
+
+summary(lm(Ax1 ~ creation_stories + guttman_3, 
+           data = model_data_all))
+
+
+# Is creation_stories predicted by guttman_3?
+summary(lm(creation_stories ~ guttman_3, data = model_data_all))
+
+# Is it predicted by Ax1?
+summary(lm(creation_stories ~ Ax1, data = model_data_all))
+
+# Does it add to Ax1 prediction after guttman_3 and matri?
+summary(lm(Ax1 ~ guttman_3 + matri + creation_stories,
+           data = model_data_all))
+
+
 
