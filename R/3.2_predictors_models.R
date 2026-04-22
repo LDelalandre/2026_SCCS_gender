@@ -3,7 +3,7 @@
 # Correlations ####
 
 # define your predictors and axes
-predictors <- c("complexity", "agriculture_cereals", "agriculture_importance",
+predictors <- c("complexity", "guttman_3", "agriculture_cereals", "agriculture_importance",
                 "herding_importance", "herding_milk", "hunting",
                 "warfare_intensity", "warfare_location", "matri",
                 "creation_stories", "weaning", "taboo")

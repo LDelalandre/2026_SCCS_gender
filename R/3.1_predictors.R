@@ -274,7 +274,7 @@ get_loadings("complexity",     n_axes = 4) %>% print(n = 31)
 
 complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
   as.data.frame() %>%
-  dplyr::select(complexity_downstream = Axis.1) %>% # positive = complex
+  dplyr::select(complexity = Axis.1) %>% # positive = complex
   tibble::rownames_to_column("soc_id")
 
 hunting <- cat_results[["hunting"]]$pcoa$vectors %>%
@@ -364,14 +364,14 @@ predictors <- c("complexity", "agriculture_cereals",
                 "herding_milk", "hunting", "warfare_intensity",
                 "warfare_location", "matri")
 
-map_dfr(predictors, ~{
-  cor.test(pred_resp[[.x]], pred_resp$Axis.1, 
-           use = "complete.obs") %>%
-    broom::tidy() %>%
-    mutate(predictor = .x)
-}) %>%
-  dplyr::select(predictor, estimate, p.value) %>%
-  arrange(p.value)
+# map_dfr(predictors, ~{
+#   cor.test(pred_resp[[.x]], pred_resp$Axis.1, 
+#            use = "complete.obs") %>%
+#     broom::tidy() %>%
+#     mutate(predictor = .x)
+# }) %>%
+#   dplyr::select(predictor, estimate, p.value) %>%
+#   arrange(p.value)
 
 dropped <- c("weaning", "taboo", "creation_stories", "density")
 

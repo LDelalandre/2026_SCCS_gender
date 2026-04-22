@@ -47,12 +47,12 @@ whyte_data_wide <- sccs %>%
   group_by(soc_id, var_id) %>%
   slice_max(year, na_rm = TRUE, n = 1) %>%
   ungroup() %>%
-  select(soc_id, var_id, code) %>%
+  dplyr::select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code) %>% 
   filter(!if_all(-soc_id, is.na))
 
 mat <- whyte_data_wide %>%
-  select(-soc_id) %>%       # remove the id column
+  dplyr::select(-soc_id) %>%       # remove the id column
   as.matrix()
 
 rownames(mat) <- whyte_data_wide$soc_id

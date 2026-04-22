@@ -893,4 +893,9 @@ summary(lm(Ax1 ~ guttman_3 + matri + creation_stories,
            data = model_data_all))
 
 
+# Other axes ####
+
+summary(lm(Ax3 ~ matri + guttman_3, 
+           data = model_data_all))
+
 
