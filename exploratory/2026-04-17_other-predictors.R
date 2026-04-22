@@ -849,23 +849,62 @@ summary(lm(Ax2 ~ hunting, data = model_data_all))
 summary(lm(Ax2 ~ agriculture_importance, data = model_data_all))
 summary(lm(Ax2 ~ complexity, data = model_data_all))
 
-dag_Ax2_correct <- dagitty('dag {
-  ecology -> hunting
-  ecology -> agriculture_importance
+dag_Ax2 <- dagitty::dagitty('dag {
+  ecology -> agriculture_cereals
   ecology -> herding_importance
-  herding_importance -> hunting
   agriculture_cereals -> hunting
-  complexity -> hunting
-  complexity -> agriculture_importance
+  herding_importance -> hunting
+  agriculture_cereals -> complexity
+  herding_importance -> complexity
+  complexity -> guttman_3
+  guttman_3 -> agriculture_importance
   hunting -> Ax2
   agriculture_importance -> Ax2
 }')
 
-plot(dag_Ax2_correct)
+plot(dag_Ax2)
+
+dagitty::impliedConditionalIndependencies(dag_Ax2)
 
 # From graph 1 to axis 2
 summary(lm(Ax2 ~ herding_importance, 
            data = model_data_all))
+
+
+## TEST DAG axis 2 ####
+
+# Does guttman_3 predict agriculture_importance?
+summary(lm(agriculture_importance ~ guttman_3, data = model_data_all))
+
+# Does agriculture_importance predict guttman_3?
+summary(lm(guttman_3 ~ agriculture_importance, data = model_data_all))
+
+# Which direction survives controlling the other?
+summary(lm(agriculture_importance ~ guttman_3 + agriculture_cereals,
+           data = model_data_all))
+summary(lm(guttman_3 ~ agriculture_importance + agriculture_cereals,
+           data = model_data_all))
+
+
+# Priority testable independencies ####
+
+# Does guttman_3 predict Ax2 through agriculture_importance?
+# Step 1: does guttman_3 predict agriculture_importance?
+summary(lm(agriculture_importance ~ guttman_3, data = model_data_all))
+
+# Step 2: does agriculture_importance predict Ax2 after controlling guttman_3?
+summary(lm(Ax2 ~ guttman_3 + agriculture_importance, data = model_data_all))
+
+# Step 3: mediation
+library(mediation)
+fit_med <- lm(agriculture_importance ~ guttman_3, data = model_data_all)
+fit_out <- lm(Ax2 ~ guttman_3 + agriculture_importance, data = model_data_all)
+med <- mediate(fit_med, fit_out,
+               treat = "guttman_3",
+               mediator = "agriculture_importance",
+               boot = TRUE, sims = 1000)
+summary(med)
+
 
 # Markov equivalent graphs ####
 equiv <- equivalentDAGs(dag_B_final)
@@ -893,9 +932,114 @@ summary(lm(Ax1 ~ guttman_3 + matri + creation_stories,
            data = model_data_all))
 
 
+summary(lm(Ax1 ~ guttman_3 + Ax2,
+           data = model_data_all))
+
+
 # Other axes ####
 
 summary(lm(Ax3 ~ matri + guttman_3, 
            data = model_data_all))
 
 
+# DAG_final ####
+
+
+dag_all <- dagitty::dagitty('dag {
+  ecology -> agriculture_cereals
+  ecology -> herding_importance
+  agriculture_cereals -> hunting
+  herding_importance -> hunting
+  agriculture_cereals -> complexity
+  herding_importance -> complexity
+  complexity -> guttman_3
+  guttman_3 -> matri
+  guttman_3 -> Ax1
+  matri -> Ax1
+  guttman_3 -> agriculture_importance
+  hunting -> Ax2
+  agriculture_importance -> Ax2
+}')
+
+dag_all <- dagitty::dagitty('dag {
+  ecology -> agriculture_cereals
+  ecology -> herding_importance
+  ecology -> hunting
+  agriculture_cereals -> hunting
+  herding_importance -> hunting
+  agriculture_cereals -> complexity
+  herding_importance -> complexity
+  complexity -> guttman_3
+  guttman_3 -> matri
+  guttman_3 -> Ax1
+  matri -> Ax1
+  guttman_3 -> agriculture_importance
+  hunting -> Ax2
+  agriculture_importance -> Ax2
+}')
+
+dagitty::latents(dag_all) <- "ecology"
+
+
+ggdag::ggdag(dag_all, layout = "sugiyama",
+             node_size = 20,
+             text_size = 3,
+             text_col = "black",
+             node = F) +
+  ggdag::theme_dag()
+
+dagitty::impliedConditionalIndependencies(dag_all)
+
+## Correct pb with hunting ####
+
+# Rebuild hunting as SCCS730 only (reversed so higher = more hunting)
+# SCCS730 runs 1=dominant to 5=absent, so reverse it
+model_data_all <- model_data_all |>
+  dplyr::mutate(hunting_v2 = 6 - SCCS730)
+
+# Refit with new hunting variable and rerun local tests
+model_data_complete_v2 <- model_data_all |>
+  as.data.frame() |>
+  dplyr::select(Ax1, Ax2, agriculture_cereals, agriculture_importance,
+                complexity, guttman_3, herding_importance, 
+                hunting_v2, matri) |>
+  tidyr::drop_na()
+
+dag_final <- dagitty::dagitty('dag {
+  ecology -> agriculture_cereals
+  ecology -> herding_importance
+  agriculture_cereals -> complexity
+  herding_importance -> complexity
+  herding_importance -> hunting_v2
+  complexity -> hunting_v2
+  complexity -> guttman_3
+  guttman_3 -> matri
+  guttman_3 -> Ax1
+  matri -> Ax1
+  guttman_3 -> agriculture_importance
+  hunting_v2 -> Ax2
+  agriculture_importance -> Ax2
+}')
+dagitty::latents(dag_final) <- "ecology"
+
+tests_final <- dagitty::localTests(dag_final, 
+                                   data = model_data_complete_v2, 
+                                   type = "cis.pillai")
+
+tests_final[order(abs(tests_final$estimate), decreasing = TRUE), ]
+
+ggdag::ggdag(dag_final, layout = "sugiyama",
+             node_size = 20,
+             text_size = 3,
+             text_col = "black",
+             node = F) +
+  ggdag::theme_dag()
+
+dagitty::adjustmentSets(dag_all, 
+                        exposure = "Ax1", 
+                        outcome = "ecology")
+
+# Confirm
+summary(lm(guttman_3 ~ complexity + hunting_v2, data = model_data_complete_v2))
+summary(lm(matri ~ complexity + hunting_v2, data = model_data_complete_v2))
+summary(lm(agriculture_importance ~ guttman_3 + hunting_v2, data = model_data_complete_v2))
