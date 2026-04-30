@@ -230,7 +230,8 @@ wrap_plots(scree_plots, ncol = 3)
 get_loadings <- function(cat, n_axes = 3) {
   
   soc_ids    <- rownames(cat_results[[cat]]$pcoa$vectors)
-  axis_names <- paste0(toupper(substr(cat, 1, 1)), "Co", 1:n_axes)
+  # axis_names <- paste0(toupper(substr(cat, 1, 1)), "Co", 1:n_axes)
+  axis_names <- paste0("Co", 1:n_axes)
   
   axes_df <- cat_results[[cat]]$pcoa$vectors %>%
     as.data.frame() %>%
@@ -254,6 +255,26 @@ get_loadings <- function(cat, n_axes = 3) {
 
 get_loadings("complexity",     n_axes = 4) %>% print(n = 31)
 
+pred_loadings <- names(cat_results)[names(cat_results) != "male_solidarity"] %>%
+  map_dfr(function(cat_name) {
+    get_loadings(cat_name, n_axes = 2) %>%
+      mutate(category = cat_name, .before = everything())
+  })
+
+pred_loadings <- names(cat_results) %>%
+  set_names() %>%
+  map_dfr(function(cat_name) {
+    result <- tryCatch(
+      get_loadings(cat_name, n_axes = 4),
+      error = function(e) {
+        get_loadings(cat_name, n_axes = 2) %>%
+          mutate(Co3 = NA_real_, Co4 = NA_real_)
+      }
+    )
+    result
+  }, .id = "category")
+
+# write.csv2(all_loadings, "output/3.1_predictors_pred_loadings.csv", row.names = F)
 
 # Extract predictors per category ####
 

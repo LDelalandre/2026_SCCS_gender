@@ -69,7 +69,7 @@ write.csv(gleeson_id,"output/2026-03_SCCS_gleeson_id.csv", row.names = F)
 gleeson_id <- read.csv(here::here("output/2026-03_SCCS_gleeson_id.csv"))
 
 dimorphism_vals <- gleeson_id %>%
-  select(soc_id, height_ratio)
+  select(soc_id, height_ratio, male_stature, female_stature)
 
 dimorphism_vals %>% 
   mutate(ratioMtF <- 1/height_ratio) 
@@ -95,6 +95,19 @@ coords_extended %>%
   geom_point() +
   theme_classic() +
   ggtitle("All the regions grouped")
+
+coords_extended %>% 
+  ggplot(aes(x = Ax1, y = male_stature)) +
+  geom_point() +
+  theme_classic() +
+  ggtitle("All the regions grouped")
+
+coords_extended %>% 
+  ggplot(aes(x = Ax1, y = female_stature)) +
+  geom_point() +
+  theme_classic() +
+  ggtitle("All the regions grouped")
+
 
 coords_extended %>% 
   ggplot(aes(x = Ax2, y = height_ratio)) +
@@ -130,6 +143,8 @@ mod_domination_size <- readRDS(here::here("output/2026-03-19_whyte_mod_dominatio
 
 
 mod_domination_size %>% summary()
+
+mod_domination_size %>% bayes_R2()
 
 coords_extended %>%
   tidybayes::add_epred_draws(mod_domination_size, ndraws = 100) %>%

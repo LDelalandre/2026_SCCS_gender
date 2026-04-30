@@ -177,15 +177,16 @@ interpret_axis <- function(ax, r2_min = r2_threshold, pct_min = pct_threshold){
 all_axes_table <- map_dfr(1:10, function(ax){
   interpret_axis(ax) %>%
     mutate(pco = ax, .before = everything())
-})
-
+}) %>% 
+  left_join(whyte_category %>% select(variable = var_id_whyte, category, category_Angarika)) %>% 
+  select(-c(category1,category2))
 
 # ── Render ────────────────────────────────────────────────────────────────────
 all_axes_table %>%
   kable(
     caption   = "Variable loadings across PCoA axes",
-    col.names = c("PCo", "Variable", "Title", "Category1" , "Category2", 
-                  "Loading", "R² total", "% this axis"),
+    col.names = c("PCo", "Variable", "Title" , 
+                  "Loading", "R² total", "% this axis", "Category", "category_Angarika"),
     align     = c("c", "l", "l", "l", "l", "r", "r", "r")
   ) %>%
   kable_styling(
@@ -486,9 +487,10 @@ var_order <- var_loadings_corrected %>%
   unique()
 
 
-vars_plot <- var_loadings_corrected %>%
+vars_plot <- var_loadings_corrected %>% 
   left_join(whyte_vars %>% select(var_id_whyte, category2),
-            by = "var_id_whyte") %>%
+            by = "var_id_whyte") %>% 
+  left_join(whyte_category %>% select(var_id_whyte, category_Angarika)) %>%
   pivot_longer(cols = c(Axis.1, Axis.2, Axis.3, Axis.4, Axis.5, Axis.6, Axis.7, Axis.8),
                names_to = "axis",
                values_to = "loading") %>%
@@ -503,20 +505,31 @@ vars_plot <- var_loadings_corrected %>%
       "role_material",
       "role_symbolic"
     ))
-  )
+  ) 
 
 
 
 # Loadings plot ####
 
 # Step 1: define colors once
+# category_colors <- c(
+#   "domination"      = "#66C2A5",
+#   "power"           = "#FC8D62", 
+#   "sexual_autonomy" = "#8DA0CB",
+#   "role_material"   = "#E78AC3",
+#   "role_symbolic"   = "#A6D854"
+# )
+
 category_colors <- c(
-  "domination"      = "#66C2A5",
-  "power"           = "#FC8D62", 
-  "sexual_autonomy" = "#8DA0CB",
-  "role_material"   = "#E78AC3",
-  "role_symbolic"   = "#A6D854"
+  "Gender Ideology"      = "#66C2A5",
+  "Gendered violence"    = "#FC8D62",
+  "Politics"             = "#8DA0CB",
+  "Family & Household"   = "#E78AC3",
+  "Subsistence & Economy" = "#A6D854",
+  "Sex & Marriage"       = "#FFD92F",
+  "Religion & Rituals"   = "#E5C494"
 )
+
 
 legend_plot <- ggplot(
   data.frame(category = names(category_colors)),
@@ -533,19 +546,18 @@ cowplot::plot_grid(standalone_legend)
 # Step 2: for each label in y axis order, what color should it be?
 # ggplot draws y axis from bottom to top = factor levels in order
 # axis.text.y color vector must match that order exactly
-y_axis_colors <- vars_plot %>%
-  distinct(title_shortened, category) %>%
-  mutate(title_shortened = factor(title_shortened, 
-                                  levels = levels(vars_plot$title_shortened))) %>%
-  arrange(title_shortened) %>%        # same order ggplot uses internally
-  mutate(color = category_colors[as.character(category)]) %>%
+y_axis_colors <- vars_plot2 %>%
+  distinct(title_shortened, category_Angarika) %>%
+  mutate(title_shortened = factor(title_shortened,
+                                  levels = levels(vars_plot2$title_shortened))) %>%
+  arrange(title_shortened) %>%
+  mutate(color = category_colors[as.character(category_Angarika)]) %>%
   pull(color)
 
-# Step 3: plot
-loadings_plot <- ggplot(vars_plot, aes(x = loading,
-                                       y = title_shortened,
-                                       fill = category,
-                                       alpha = significant)) +
+loadings_plot <- ggplot(vars_plot2, aes(x = loading,
+                                        y = title_shortened,
+                                        fill = category_Angarika,
+                                        alpha = significant)) +
   geom_col() +
   geom_vline(xintercept = c(-0.30, 0.30),
              linetype = "dotted", color = "grey40", alpha = 0.7) +
@@ -553,9 +565,10 @@ loadings_plot <- ggplot(vars_plot, aes(x = loading,
   facet_wrap(~ axis, nrow = 1) +
   scale_fill_manual(values = category_colors, name = "Domain") +
   scale_alpha_manual(values = c("FALSE" = 0.25, "TRUE" = 1), guide = "none") +
+  scale_y_discrete(limits = rev) +
   theme_bw(base_size = 9) +
   theme(
-    axis.text.y = element_text(size = 7, color = y_axis_colors),
+    axis.text.y = element_text(size = 7, color = rev(y_axis_colors)),
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 10),
     legend.position = "bottom",
@@ -563,12 +576,14 @@ loadings_plot <- ggplot(vars_plot, aes(x = loading,
   ) +
   labs(x = "Loading (corrected for coding direction)", y = NULL)
 
+loadings_plot
+
 loadings_plot2 <- cowplot::plot_grid(standalone_legend,
                                      loadings_plot + theme(legend.position = "none"),
                                      rel_widths = c(0.2, 1))
 
 
-ggsave("output/2026-04-08_pcoa_category_loadings_plot.png", loadings_plot2,
+ggsave("output/2026-04-08_pcoa_category_loadings_plot.png", loadings_plot,
        width = 17, height = 6)
 
 
@@ -733,7 +748,7 @@ plot_biplot <- function(ax1 = 1, ax2 = 2, loading_threshold = 0.3,
                    aes(x = 0, y = 0, xend = x, yend = y),
                    arrow = arrow(length = unit(0.25, "cm"), type = "closed"),
                    color = "#cc0000", linewidth = 0.7) +
-      geom_text_repel(data = sccs_arrows_df,
+      ggrepel::geom_text_repel(data = sccs_arrows_df,
                       aes(x = x, y = y, label = label),
                       size = 2.5, color = "#cc0000", fontface = "bold",
                       bg.color = "white", bg.r = 0.08,
@@ -834,8 +849,16 @@ sccs_loadings %>%
   ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
   geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
   geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
-  scale_color_brewer(palette = "Set1", name = "Group") +
+  scale_color_brewer(palette = "Set2", direction = -1, name = "Group") +
   theme_bw(base_size = 10) +
   labs(x = "PCo1 (formal domination)",
        y = "PCo2 (work segregation)",
        title = "Additional variables projected on main PCoA axes")
+
+
+# Explore loadings ####
+whyte_category %>% select(var_id_whyte, category_Angarika) %>% 
+  left_join(var_loadings_corrected,
+                by = "var_id_whyte") %>% 
+  mutate(across(Axis.1:Axis.10), round(., digits = 2))
+  View

@@ -6,7 +6,8 @@ library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
 library(vegan) # for robustness
 
-
+whyte_category_angarika <- read.csv("data/SCCS/gender_response_variables_recode_angarika.csv") %>% 
+  select(var_id, category_Angarika)
 
 
 # pcoa ####
@@ -29,7 +30,10 @@ whyte_category <- whyte_vars %>%
            case_when(category1 == "role" & category2 %in% c("rituals", "sexual") ~ "role_symbolic",
                      category1 == "role" & category2 %in% c("subsistence", "warfare") ~ "role_material",
                      category1 == "autonomy" & category2 == "sexual" ~ "sexual_autonomy",
-                     TRUE ~ category1))
+                     TRUE ~ category1)) %>% 
+  left_join(whyte_category_angarika)
+
+
   
 whyte_vars %>% 
   group_by(category1, category2) %>% 
