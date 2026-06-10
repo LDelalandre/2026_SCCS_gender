@@ -62,6 +62,22 @@ gleeson_id <- gleeson %>%
 
 write.csv(gleeson_id,"output/2026-03_SCCS_gleeson_id.csv", row.names = F)
 
+# glottocode ####
+
+library(lingtypology)
+
+glottolog_families <- lingtypology::glottolog %>%
+  select(glottocode, affiliation) %>%
+  mutate(
+    language_family = if_else(
+      affiliation == "" | is.na(affiliation),
+      "isolate",                          # language isolates have no affiliation
+      sub(",.*", "", affiliation)         # take everything before the first comma
+    )
+  )
+
+societies_glottolog <- societies %>% 
+  left_join(glottolog_families)
 
 
 # Analyse ####
@@ -76,7 +92,12 @@ dimorphism_vals %>%
 
 # Join both to coords_df
 coords_extended <- coords_df %>%
-  left_join(dimorphism_vals,  by = "soc_id")
+  left_join(dimorphism_vals,  by = "soc_id") %>% 
+  left_join(societies_glottolog)
+
+coords_extended %>% 
+  count(language_family) %>% 
+  arrange(desc(n))
 
 coords_extended %>% 
   filter(!is.na(height_ratio)) %>% 
@@ -110,10 +131,13 @@ coords_extended %>%
 
 
 coords_extended %>% 
-  ggplot(aes(x = Ax2, y = height_ratio)) +
+  ggplot(aes(x = Ax4, y = height_ratio)) +
   geom_point() +
   theme_classic() +
   ggtitle("All the regions grouped")
+
+
+
 
 
 
@@ -125,7 +149,7 @@ run_model <- F
 
 if (run_model == T){
   mod_domination_size <- brm(
-    height_ratio ~ Ax1 + (1|region),
+    height_ratio ~ Ax1  + (1|region), # + (1|language_family) # not enough data points to do so
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
               prior(normal(0, 0.5), class = Intercept),

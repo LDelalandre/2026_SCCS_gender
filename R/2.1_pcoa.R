@@ -145,50 +145,7 @@ robustness_check <- F
 if(robustness_check){
   n_axes <- 10
   ref_coords <- pcoa_result$vectors[, 1:n_axes]
-  
-  ## Variables: subsampling ####
-  
-  vars_gender <- whyte_vars$var_id_whyte 
-  
-  n_boot       <- 500
-  boot_m2      <- numeric(n_boot)
-  boot_r       <- numeric(n_boot)
-  boot_axis_r  <- matrix(NA, nrow = n_boot, ncol = n_axes)
-  
-  
-  prop <- 0.70   # adjust — try 0.70 and 0.80 to see sensitivity
-  
-  set.seed(123)
-  prop <- 0.80
-  
-  for(b in 1:n_boot){
-    boot_vars <- sample(vars_gender, size = floor(length(vars_gender) * prop), replace = FALSE)
-    mat_boot  <- mat_filtered2[, boot_vars, drop = FALSE]
-    
-    gd_boot <- daisy(mat_boot,
-                     metric = "gower",
-                     type   = list(ordratio = 1:ncol(mat_boot)))
-    
-    pc_boot <- pcoa(gd_boot)
-    k       <- min(n_axes, sum(pc_boot$values$Eigenvalues > 0))
-    
-    pro     <- procrustes(ref_coords[, 1:k],
-                          pc_boot$vectors[, 1:k, drop = FALSE])
-    boot_m2[b] <- pro$ss
-    boot_m2[b] <- 1 - prot$t0^2   # always bounded [0,1], sample-size independent
-    
-    prot       <- protest(ref_coords[, 1:k],
-                          pc_boot$vectors[, 1:k, drop = FALSE],
-                          permutations = 99)
-    boot_r[b]  <- prot$t0
-    
-    rotated <- pro$Yrot
-    for(j in 1:k){
-      boot_axis_r[b, j] <- cor(ref_coords[, j], rotated[, j],
-                               method = "spearman")
-    }
-  }
-  
+
   # ── Summaries ──────────────────────────────────────────────────────────────────
   cat("Variable bootstrap r:  mean =", round(mean(boot_r), 4),
       " 95% CI [", round(quantile(boot_r, 0.025), 4),
@@ -204,7 +161,7 @@ if(robustness_check){
   set.seed(42)
   n_boot      <- 500
   n_axes      <- 12
-  n_soc       <- nrow(mat_filtered2)
+  n_soc       <- nrow(mat_ord_fixed)
   ref_coords  <- pcoa_result$vectors[, 1:n_axes]
   boot_r      <- numeric(n_boot)
   boot_axis_r <- matrix(NA, nrow = n_boot, ncol = n_axes)
@@ -213,7 +170,7 @@ if(robustness_check){
   for(b in 1:n_boot){
     
     idx      <- sample(1:n_soc, size = floor(n_soc * prop), replace = FALSE)
-    mat_boot <- mat_filtered2[idx, ]
+    mat_boot <- mat_ord_fixed[idx, ]
     
     gd_boot  <- daisy(mat_boot,
                       metric = "gower",
@@ -258,7 +215,7 @@ if(robustness_check){
   for(b in 1:n_boot){
     
     boot_vars <- sample(vars_gender, size = floor(length(vars_gender) * prop), replace = FALSE)
-    mat_boot  <- mat_filtered2[, boot_vars, drop = FALSE]
+    mat_boot  <- mat_ord_fixed[, boot_vars, drop = FALSE]
     
     gd_boot <- daisy(mat_boot,
                      metric = "gower",
@@ -288,3 +245,157 @@ if(robustness_check){
   names(axis_stability_vars) <- paste0("PCo", 1:n_axes)
   print(round(axis_stability_vars, 3))
 }
+
+
+## Stability depending on the number of variables ####
+
+if (robustness_check){
+  props <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
+  n_boot <- 200  # per proportion
+  n_axes <- 1    # focus on axis 1 only
+  
+  ref_coords <- pcoa_result$vectors[, 1, drop = FALSE]
+  
+  
+  stability_by_prop <- map_dfr(props, function(prop) {
+    
+    axis_r <- numeric(n_boot)
+    
+    for (b in 1:n_boot) {
+      boot_vars <- sample(vars_gender, 
+                          size    = max(2, floor(length(vars_gender) * prop)), 
+                          replace = FALSE)
+      mat_boot  <- mat_ord_fixed[, boot_vars, drop = FALSE]
+      
+      # Skip if any society has all NAs across selected variables
+      all_na_rows <- apply(mat_boot, 1, function(x) all(is.na(x)))
+      if (any(all_na_rows)) {
+        axis_r[b] <- NA
+        next
+      }
+      
+      gd_boot <- tryCatch(
+        daisy(mat_boot, metric = "gower",
+              type = list(ordratio = 1:ncol(mat_boot))),
+        error = function(e) NULL
+      )
+      if (is.null(gd_boot)) { axis_r[b] <- NA; next }
+      
+      # Skip if dissimilarity matrix has infinite or NA values
+      if (any(!is.finite(as.matrix(gd_boot)))) { axis_r[b] <- NA; next }
+      
+      pc_boot <- tryCatch(
+        pcoa(gd_boot),
+        error = function(e) NULL
+      )
+      if (is.null(pc_boot)) { axis_r[b] <- NA; next }
+      
+      if (sum(pc_boot$values$Eigenvalues > 0) >= 1) {
+        pro <- tryCatch(
+          procrustes(ref_coords, pc_boot$vectors[, 1, drop = FALSE]),
+          error = function(e) NULL
+        )
+        if (!is.null(pro)) {
+          axis_r[b] <- cor(ref_coords[, 1], pro$Yrot[, 1], method = "spearman")
+        } else {
+          axis_r[b] <- NA
+        }
+      }
+    }
+    
+    data.frame(
+      prop     = prop,
+      n_vars   = floor(length(vars_gender) * prop),
+      mean_r   = mean(axis_r,            na.rm = TRUE),
+      ci_low   = quantile(axis_r, 0.025, na.rm = TRUE),
+      ci_high  = quantile(axis_r, 0.975, na.rm = TRUE),
+      n_valid  = sum(!is.na(axis_r))  # how many bootstraps succeeded
+    )
+  })
+  
+  
+  ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
+    geom_ribbon(aes(ymin = ci_low, ymax = ci_high), fill = "grey80") +
+    geom_line(color = "steelblue", linewidth = 0.8) +
+    geom_point(color = "steelblue", size = 2) +
+    geom_hline(yintercept = 0.9, linetype = "dashed", color = "grey40") +
+    labs(x        = "Number of variables",
+         y        = "Axis 1 stability (Spearman r with full ordination)",
+         title    = "How many variables needed to recover axis 1?",
+         subtitle = "Dashed line = r = 0.90 stability threshold") +
+    theme_minimal(base_size = 11)
+}
+
+
+# Rather than looking for a plateau, ask: at what n do you reliably (say, 80% of the time) get r ≥ 0.8?
+
+if (robustness_check){
+  all_axis_r <- list()
+  
+  stability_by_prop <- map_dfr(seq_along(props), function(pi) {
+    prop   <- props[pi]
+    axis_r <- numeric(n_boot)
+    
+    for (b in 1:n_boot) {
+      boot_vars <- sample(vars_gender, 
+                          size    = max(2, floor(length(vars_gender) * prop)), 
+                          replace = FALSE)
+      mat_boot  <- mat_ord_fixed[, boot_vars, drop = FALSE]
+      
+      # Skip if any society has all NAs across selected variables
+      all_na_rows <- apply(mat_boot, 1, function(x) all(is.na(x)))
+      if (any(all_na_rows)) {
+        axis_r[b] <- NA
+        next
+      }
+      
+      gd_boot <- tryCatch(
+        daisy(mat_boot, metric = "gower",
+              type = list(ordratio = 1:ncol(mat_boot))),
+        error = function(e) NULL
+      )
+      if (is.null(gd_boot)) { axis_r[b] <- NA; next }
+      
+      # Skip if dissimilarity matrix has infinite or NA values
+      if (any(!is.finite(as.matrix(gd_boot)))) { axis_r[b] <- NA; next }
+      
+      pc_boot <- tryCatch(
+        pcoa(gd_boot),
+        error = function(e) NULL
+      )
+      if (is.null(pc_boot)) { axis_r[b] <- NA; next }
+      
+      if (sum(pc_boot$values$Eigenvalues > 0) >= 1) {
+        pro <- tryCatch(
+          procrustes(ref_coords, pc_boot$vectors[, 1, drop = FALSE]),
+          error = function(e) NULL
+        )
+        if (!is.null(pro)) {
+          axis_r[b] <- cor(ref_coords[, 1], pro$Yrot[, 1], method = "spearman")
+        } else {
+          axis_r[b] <- NA
+        }
+      }
+    }
+    
+    all_axis_r[[pi]] <<- axis_r  # store raw values
+    
+    data.frame(
+      prop        = prop,
+      n_vars      = floor(length(vars_gender) * prop),
+      mean_r      = mean(axis_r,            na.rm = TRUE),
+      ci_low      = quantile(axis_r, 0.025, na.rm = TRUE),
+      ci_high     = quantile(axis_r, 0.975, na.rm = TRUE),
+      pct_above08 = mean(axis_r >= 0.8,     na.rm = TRUE),
+      n_valid     = sum(!is.na(axis_r))
+    )
+  })
+  
+  stability_by_prop %>% 
+    ggplot(aes(x = n_vars, y = pct_above08)) +
+    geom_point()
+  
+}
+
+
+

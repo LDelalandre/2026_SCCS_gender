@@ -580,8 +580,57 @@ pred_resp %>%
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
   labs(x = "Axis 1", y = "Axis 2") +
   theme_minimal(base_size = 13) 
-  ggrepel::geom_text_repel((aes(label = soc_id)))
+  # ggrepel::geom_text_repel((aes(label = soc_id)))
 
+codes_SCCS820 <- codes %>% 
+  filter(var_id == "SCCS820") %>% 
+  select(code, description) %>% 
+  rename(SCCS820 = code) %>% 
+  mutate(SCCS820 = as.factor(SCCS820))
+
+society_subsistence_type <- sccs %>% 
+  filter(soc_id %in% pred_resp$soc_id) %>% 
+  filter(var_id %in% c("SCCS820", "SCCS833")) %>%
+  select(soc_id, var_id, code) %>% 
+  pivot_wider(names_from = var_id, values_from = code) %>% 
+  mutate(SCCS820 = as.factor(SCCS820)) %>% 
+  left_join(societies %>% select(soc_id, pref_name_for_society)) %>% 
+  left_join(codes_SCCS820) %>% 
+  mutate(label = paste(SCCS820, description, sep = "_"))
+
+society_subsistence_type %>% 
+  group_by(SCCS820) %>% 
+  summarize(n = n())
+
+pred_resp %>%
+  left_join(society_subsistence_type, by = "soc_id") %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = Axis.1, y = Axis.2, shape = region)) +
+  geom_point() +
+  # ggrepel::geom_text_repel(aes(label = pref_name_for_society)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
+  labs(x = "Axis 1", y = "Axis 2") +
+  theme_minimal(base_size = 13) +
+  facet_wrap(~label) +
+  scale_shape_manual(values = c(16, 17, 15, 18, 1, 2, 0, 5)) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  ) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),  # or fill = "gray97"
+    panel.spacing = unit(1.5, "lines")
+  ) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),
+    panel.spacing = unit(1.5, "lines"),
+    # strip.background = element_rect(fill = "gray20", color = NA),
+    # strip.text = element_text(color = "white", face = "bold"),
+    panel.grid.minor = element_blank()
+  ) 
 
 ## Biplot pcoa ####
 
@@ -642,9 +691,7 @@ sccs_loadings <- map_dfr(1:10, function(ax) {
 
 
 sccs_loadings %>% 
-  left_join(variables %>% select(var_id, title), by = "var_id") %>% 
-  View
-
+  left_join(variables %>% select(var_id, title), by = "var_id") 
 
 
 plot_biplot <- function(ax1 = 1, ax2 = 2, loading_threshold = 0.3,
