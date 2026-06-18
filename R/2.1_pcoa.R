@@ -398,4 +398,92 @@ if (robustness_check){
 }
 
 
+## Chose the variables to keep ####
+#TODO: remove these analyses (just exploratory)
 
+# ── Manual variable removal robustness check ──────────────────────────────────
+
+# Define the variable subsets you want to test
+# Each entry is a named list: label + variables to KEEP (or EXCLUDE)
+test_subsets <- list(
+  list(label = "All",        vars = c("DV46", "DV40", "DV51", "DV15", "DV36", "DV48","DV5")),
+  list(label = "Gender ideology",        vars = c("DV46", "DV40", "DV51")),
+  list(label = "Family and household",        vars = c("DV15")),
+  list(label = "Sex and marriage",        vars = c("DV36")),
+  list(label = "Religion and rituals",        vars = c("DV48", "DV5"))
+)
+
+# Reference: axis 1 from the full ordination
+ref_coords <- pcoa_result$vectors[, 1, drop = FALSE]
+
+# ── Helper: run one PCoA on a variable subset and return Spearman r vs ref ───
+run_subset_pcoa <- function(var_subset, label) {
+  mat_sub <- mat_ord_fixed[, var_subset, drop = FALSE]
+  
+  # Remove societies with all NAs for the selected variables
+  all_na_rows <- apply(mat_sub, 1, function(x) all(is.na(x)))
+  if (any(all_na_rows)) {
+    message(label, ": dropping ", sum(all_na_rows), " societies with all NAs.")
+    mat_sub <- mat_sub[!all_na_rows, , drop = FALSE]
+  }
+  
+  gd <- tryCatch(
+    daisy(mat_sub, metric = "gower",
+          type = list(ordratio = 1:ncol(mat_sub))),
+    error = function(e) { warning(label, ": daisy failed — ", e$message); NULL }
+  )
+  if (is.null(gd) || any(!is.finite(as.matrix(gd)))) return(NULL)
+  
+  pc <- tryCatch(
+    pcoa(gd),
+    error = function(e) { warning(label, ": pcoa failed — ", e$message); NULL }
+  )
+  if (is.null(pc) || sum(pc$values$Eigenvalues > 0) < 1) return(NULL)
+  
+  # Align ref_coords to the same societies
+  ref_sub <- ref_coords[!all_na_rows, , drop = FALSE]
+  
+  # ... then use ref_sub instead of ref_coords in procrustes/cor
+  pro <- procrustes(ref_sub, pc$vectors[, 1, drop = FALSE])
+  r   <- cor(ref_sub[, 1], pro$Yrot[, 1], method = "spearman")
+  
+
+  data.frame(
+    label    = label,
+    n_vars   = length(var_subset),
+    spearman_r = round(r, 3)
+  )
+}
+
+# ── Run all subsets ────────────────────────────────────────────────────────────
+results <- map_dfr(test_subsets, ~ run_subset_pcoa(.x$vars, .x$label))
+
+# Add the full model as baseline
+r_full <- cor(ref_coords[, 1], ref_coords[, 1], method = "spearman")  # = 1
+
+
+print(results)
+
+
+## See if my subset of variables is redundant ####
+
+# Convert to numeric first
+mat_num <- mat_ord_fixed[, c("DV46","DV40","DV51","DV15","DV36","DV48","DV5")] %>%
+  mutate(across(everything(), as.numeric))
+
+cor(mat_num, method = "spearman", use = "pairwise.complete.obs") %>% round(2)
+
+
+
+priority_vars <- c("DV46", "DV40", "DV51", "DV15", "DV36", "DV48", "DV5")
+# Order these by loading magnitude first
+priority_vars <- names(sort(abs(variable_loadings[priority_vars, "PCo1"]), decreasing = TRUE))
+
+# Then test cumulative subsets: top 1, top 2, ..., all 7
+cumulative_subsets <- map(1:length(priority_vars), function(n) {
+  list(label = paste0("Top ", n, " vars"),
+       vars  = priority_vars[1:n])
+})
+
+results_cumulative <- map_dfr(cumulative_subsets, ~ run_subset_pcoa(.x$vars, .x$label))
+print(results_cumulative)

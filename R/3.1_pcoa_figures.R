@@ -582,6 +582,8 @@ pred_resp %>%
   theme_minimal(base_size = 13) 
   # ggrepel::geom_text_repel((aes(label = soc_id)))
 
+## Subsistence ####
+
 codes_SCCS820 <- codes %>% 
   filter(var_id == "SCCS820") %>% 
   select(code, description) %>% 
@@ -607,7 +609,7 @@ pred_resp %>%
   left_join(coords_df) %>% 
   ggplot(aes(x = Axis.1, y = Axis.2, shape = region)) +
   geom_point() +
-  # ggrepel::geom_text_repel(aes(label = pref_name_for_society)) +
+  ggrepel::geom_text_repel(aes(label = pref_name_for_society)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
   labs(x = "Axis 1", y = "Axis 2") +
@@ -631,6 +633,148 @@ pred_resp %>%
     # strip.text = element_text(color = "white", face = "bold"),
     panel.grid.minor = element_blank()
   ) 
+
+## Social stratification ####
+
+codes_SCCS1751 <- codes %>% 
+  filter(var_id == "SCCS1751") %>% 
+  select(code, description) %>% 
+  rename(SCCS1751 = code) %>% 
+  mutate(SCCS1751 = as.factor(SCCS1751))
+
+society_stratification <- sccs %>% 
+  filter(soc_id %in% pred_resp$soc_id) %>% 
+  filter(var_id %in% c("SCCS1751")) %>%
+  select(soc_id, var_id, code) %>% 
+  pivot_wider(names_from = var_id, values_from = code) %>% 
+  filter(!is.na(SCCS1751)) %>% 
+  mutate(SCCS1751 = as.factor(SCCS1751)) %>% 
+  left_join(societies %>% select(soc_id, pref_name_for_society)) %>% 
+  left_join(codes_SCCS1751) %>% 
+  mutate(label = paste(SCCS1751, description, sep = "_")) 
+
+
+society_stratification %>%
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = SCCS1751, y = Axis.1)) +
+  geom_boxplot() +
+  geom_point() 
+
+
+society_stratification %>%
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = Axis.1, y = Axis.2, label = pref_name_for_society)) +
+  geom_point() +
+  facet_wrap(~ SCCS1751) +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),  # or fill = "gray97"
+    panel.spacing = unit(1.5, "lines")
+  ) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),
+    panel.spacing = unit(1.5, "lines"),
+    # strip.background = element_rect(fill = "gray20", color = NA),
+    # strip.text = element_text(color = "white", face = "bold"),
+    panel.grid.minor = element_blank()
+  ) +
+  ggrepel::geom_text_repel(aes(label = pref_name_for_society))
+
+strat_subsistence <- society_stratification %>%
+  select(-label) %>% 
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(society_subsistence_type, by = "soc_id", "label") %>% 
+  left_join(coords_df) 
+
+strat_subsistence %>% 
+  ggplot(aes(x = SCCS820, y = SCCS1751, label = pref_name_for_society)) +
+  # geom_boxplot() +
+  geom_jitter()
+
+mod <- lm(Axis.1 ~ SCCS1751 + SCCS820, data = strat_subsistence %>% 
+            mutate(SCCS820 = as.numeric(SCCS820)) %>% 
+            mutate(SCCS1751 = as.numeric(SCCS1751)) )
+summary(mod)
+# the the subsistence mode is more determinant than the presence of social classes
+
+
+
+
+
+codes_SCCS270 <- codes %>% 
+  filter(var_id == "SCCS270") %>% 
+  select(code, description) %>% 
+  rename(SCCS270 = code) %>% 
+  mutate(SCCS270 = as.factor(SCCS270))
+
+society_stratification <- sccs %>% 
+  filter(soc_id %in% pred_resp$soc_id) %>% 
+  filter(var_id %in% c("SCCS270")) %>%
+  select(soc_id, var_id, code) %>% 
+  pivot_wider(names_from = var_id, values_from = code) %>% 
+  filter(!is.na(SCCS270)) %>% 
+  mutate(SCCS270 = as.factor(SCCS270)) %>% 
+  left_join(societies %>% select(soc_id, pref_name_for_society)) %>% 
+  left_join(codes_SCCS270) %>% 
+  mutate(label = paste(SCCS270, description, sep = "_")) 
+
+
+society_stratification %>%
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(society_subsistence_type %>% select(soc_id, SCCS820)) %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = Axis.1, y = Axis.2, label = pref_name_for_society, color = SCCS820)) +
+  geom_point() +
+  facet_wrap(~ SCCS270) +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),  # or fill = "gray97"
+    panel.spacing = unit(1.5, "lines")
+  ) +
+  theme(
+    panel.border = element_rect(color = "gray70", fill = NA, linewidth = 0.5),
+    panel.spacing = unit(1.5, "lines"),
+    # strip.background = element_rect(fill = "gray20", color = NA),
+    # strip.text = element_text(color = "white", face = "bold"),
+    panel.grid.minor = element_blank()
+  )  +
+  ggrepel::geom_text_repel(aes(label = pref_name_for_society))
+
+society_stratification %>%
+  select(-label) %>% 
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(society_subsistence_type, by = "soc_id", "label") %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = SCCS820, y = Axis.1, label = pref_name_for_society)) +
+  # geom_boxplot() +
+  geom_point()
+
+society_stratification %>%
+  select(-label) %>% 
+  left_join(pred_resp, by = "soc_id") %>% 
+  left_join(society_subsistence_type, by = "soc_id", "label") %>% 
+  left_join(coords_df) %>% 
+  ggplot(aes(x = SCCS270, y = Axis.1, label = pref_name_for_society)) +
+  geom_boxplot() +
+  geom_point() +
+  facet_wrap(~label) 
+
 
 ## Biplot pcoa ####
 
