@@ -273,6 +273,11 @@ pp_check(mod_complexity_size, type = "scatter_avg")
 
 # Model mediation ####
 
+pred_resp_dimorphism %>% 
+  select(complexity, height_ratio) %>% 
+  na.omit() %>% 
+  dim()
+
 run_model <- F
 
 if (run_model == T){
