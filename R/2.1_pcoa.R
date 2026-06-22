@@ -6,16 +6,13 @@ library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
 library(vegan) # for robustness
 
-whyte_category_angarika <- read.csv("data/SCCS/gender_response_variables_recode_angarika.csv") %>% 
-  select(var_id, category_Angarika)
-
 
 # pcoa ####
 ## Matrix on response variables ####
 
 whyte_vars_to_remove <- c("DV34") # locality
 
-whyte_vars <- gender_response %>% 
+whyte_vars <- gender_response_recode %>% 
   filter(column_number_whyte78 %in% rep(1:52)) %>% 
   select(var_id, title,var_id_whyte, column_number_whyte78, category1, category2, domain, domain_name, title_shortened) %>%
   mutate(short_title = paste0(var_id, "_", str_trunc(title, width = 30, ellipsis = "..."))) %>% 

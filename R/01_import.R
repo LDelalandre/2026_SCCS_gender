@@ -20,7 +20,12 @@ gleeson <- read.csv(here::here("data/gleesonFemaleStatusFood2018.csv")) %>%  # h
 gender_response <- read.csv(here::here("data/SCCS/gender_response_variables.csv"))
 gender_response_recode <- read.csv(here::here("data/SCCS/gender_response_variables_recode.csv"))
 
-gender_predictors <- read.csv("data/SCCS/gender_predictor_variables.csv")
+whyte_category_angarika <- read.csv(here::here("data/SCCS/gender_response_variables_recode_angarika.csv")) %>%
+  select(var_id, var_id_whyte, title, title_shortened, category_whyte, category_Angarika)
+
+gender_predictors <- read.csv(here::here("data/SCCS/gender_predictor_variables.csv"))
+
+
 
 
 
