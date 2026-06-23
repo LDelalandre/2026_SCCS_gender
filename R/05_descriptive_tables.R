@@ -1,7 +1,7 @@
 source("01_import.R")
 library(flextable)
 
-# Table variables ####
+# Table response variables ####
 
 whyte_category_angarika %>%
   filter(!is.na(category_whyte)) %>%
@@ -127,5 +127,17 @@ writeFormula(wb, "Sheet1",
 )
 
 saveWorkbook(wb, here::here("output/2.2_pcoa_figures_coord_societies.xlsx"), overwrite = TRUE)
+
+#TODO: add dimorphism (gleeson) info??
+
+predictors_wide %>% 
+  ggplot(aes(x = SCCS729, y = SCCS730)) +
+  geom_point() + geom_jitter()
+
+cor(predictors_wide$SCCS729, predictors_wide$SCCS730)
+
+# Table predictors ####
+
+
 
 

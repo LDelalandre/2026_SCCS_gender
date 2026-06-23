@@ -1,109 +1,8 @@
-library(cluster)
-library(ape)
-library(patchwork)
-
-whyte_societies <- sccs %>% 
-  filter(var_id %in% whyte_vars$var_id) %>% 
-  filter(!is.na(code)) %>% 
-  pull(soc_id) %>% 
-  unique()
-
-# Define predictors ####
-
-predictors_putative <- gender_predictors %>% 
-  dplyr::select(var_id, title) %>% 
-  left_join(variables) 
-
-write.csv(predictors_putative, here::here("output/03_predictors_predictors_putative.csv"))
-
-
-
-predictors_putative <- read.csv(here::here("output/03_predictors_predictors_putative_edited.csv")) %>% 
-  filter(category != "") %>% 
-  filter(predictor !="no") %>% 
-  dplyr::select(var_id, category)
-
-predictors_additional_id <- c(
-  # WARFARE
-  "SCCS1649", "SCCS1650", # warfare from Ember - this is overall: "SCCS1648"
-  # "SCCS1779", # weapons used in warfare
-  
-  # FERTILITY
-  "SCCS44", "SCCS45", # weaning
-  "SCCS34", "SCCS240", # post partum sex taboo duration (see if these are the same!)
-  "SCCS1130", "SCCS64", # population density
-  
-  # SYMBOLIC
-  # "SCCS238" , # high gods absent/otiose (paresseur) / active but not supporting morality / active and supporting it
-  "SCCS676" # Sanday's variable on Origin symbolism: "creation stories"
-  
-)
-
-predictors_additional_category <- c(rep("warfare", 2), rep("fertility", 6),
-                                    rep("symbolic", 1))
-
-predictors_additional <- data.frame(var_id = predictors_additional_id,
-                                    category = predictors_additional_category)
-
-predictors <- bind_rows(predictors_putative, predictors_additional) %>% 
-  filter(!category == "method")
-
-predictors_detailed <- predictors %>% 
-  left_join(variables %>% dplyr::select(var_id, title)) %>% 
-  arrange(category) %>% 
-  filter(!var_id == "SCCS693") %>%  # remove Whyte's binary code
-  filter(!var_id %in% c("SCCS688", "SCCS689")) %>%  # REMOVED post-european contact husbandry
-  filter(!var_id == "SCCS713") %>% # REMOVED pre-classical religion. Or should be in complexity?
-  filter(!var_id == "SCCS714") %>% #sex ratio
-  filter(!var_id == "SCCS715") # systematic absence of married males
-# filter(!var_id %in% c("SCCS695", "SCCS694")) # male solidarity, male initiation ceremonies
-
-
-write.csv(predictors_detailed, here::here("output/03_predictors_predictors_detailed.csv"), row.names = F) 
-
-pred_angarika <- read.csv("data/3.1_predictors_pred_loadings_Angarika.csv")
-
-full_join(predictors_detailed, pred_angarika) %>% 
-  write.csv("data/predictors_category.csv", row.names = F)
-
-# see the codes
-
-codes %>% 
-  filter(var_id %in% predictors_detailed$var_id) %>% 
-  View
-  
-
 # PCoA on categories ####
 
 ## Coverage ####
 
-predictors_detailed <- read.csv("output/03_predictors_predictors_detailed.csv") %>% 
-  mutate(category = case_when(
-    
-    # Guttman scale technologies
-    title == "Plow"         ~ "guttman",
-    title == "Irrigation"   ~ "guttman",
-    title == "True Weaving" ~ "guttman",
-    
-    # # Upstream complexity — material and technological
-    # var_id == "SCCS704" ~ "complexity_upstream",  # private property
-    # var_id == "SCCS705" ~ "complexity_upstream",  # settlement type
-    # var_id == "SCCS732" ~ "complexity_upstream",  # trade importance
-    # var_id == "SCCS706" ~ "complexity_upstream",  # metalworking
-    # var_id == "SCCS707" ~ "complexity_upstream",  # pottery
-    # var_id == "SCCS711" ~ "complexity_upstream",  # societal complexity Guttman
-    # 
-    # # Downstream complexity — political and organisational
-    # var_id == "SCCS699" ~ "complexity_downstream",  # political organisation
-    # var_id == "SCCS700" ~ "complexity_downstream",  # crimes punished
-    # var_id == "SCCS701" ~ "complexity_downstream",  # full-time bureaucrats
-    # var_id == "SCCS702" ~ "complexity_downstream",  # part of kingdom
-    # var_id == "SCCS703" ~ "complexity_downstream",  # kingdom in past
-    # var_id == "SCCS709" ~ "complexity_downstream",  # stratification larger
-    # var_id == "SCCS710" ~ "complexity_downstream",  # stratification local
-    
-    TRUE ~ category
-  ))
+predictors_detailed <- read.csv("output/predictors_detailed.csv")
 
 
 predictors_data <- sccs %>% 
@@ -121,22 +20,18 @@ coverage_by_cat <- predictors_data %>%
             by = "var_id") %>%
   arrange(category, desc(coverage))
 
-print(coverage_by_cat)
+coverage_by_cat
 
 # ── 0. Reshape data to wide format ────────────────────────────────────────────
 # assumes predictors_data has columns: soc_id, var_id, value
 
-predictors_wide0 <- predictors_data %>%
+predictors_wide <- predictors_data %>%
   dplyr::select(soc_id, var_id, code) %>%
   tidyr::pivot_wider(names_from = var_id, values_from = code) %>%
   tibble::column_to_rownames("soc_id") %>% 
   mutate(# WARFARE
     SCCS1649 = log(1+SCCS1649),
     SCCS1650 = log(1+SCCS1650)) 
-
-predictors_wide <- predictors_wide0 %>% 
-  dplyr::select(-SCCS676) # creation stories, just one variable, no pcoa to do
-
 
 # align to the same societies as in the response PCoA
 common_soc <- intersect(rownames(predictors_wide), 
@@ -178,9 +73,8 @@ run_category_pcoa <- function(var_ids, label) {
 # ── 2. Run per category ────────────────────────────────────────────────────────
 categories <- split(predictors_detailed$var_id, predictors_detailed$category)
 
-categories[["symbolic"]] <- NULL
-categories[["extended_families"]] <- NULL
-categories[["guttman"]] <- NULL
+categories[["technology"]] <- NULL
+categories[["hunting"]] <- NULL
 cat_results <- lapply(names(categories), function(cat) {
   run_category_pcoa(categories[[cat]], cat)
 })
@@ -283,30 +177,12 @@ pred_loadings <- names(cat_results) %>%
 
 # Extract predictors per category ####
 
-# complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
-#   as.data.frame() %>%
-#   dplyr::select(complexity = Axis.1) %>% # positive = complex
-#   tibble::rownames_to_column("soc_id")
-
-# complexity_upstream <- cat_results[["complexity_upstream"]]$pcoa$vectors %>%
-#   as.data.frame() %>%
-#   dplyr::select(complexity_upstream = Axis.1) %>% # positive = complex
-#   tibble::rownames_to_column("soc_id")
-
-# complexity_downstream <- cat_results[["complexity_downstream"]]$pcoa$vectors %>%
-#   as.data.frame() %>%
-#   dplyr::select(complexity_downstream = Axis.1) %>% # positive = complex
-#   tibble::rownames_to_column("soc_id")
 
 complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
   as.data.frame() %>%
   dplyr::select(complexity = Axis.1) %>% # positive = complex
   tibble::rownames_to_column("soc_id")
 
-hunting <- cat_results[["hunting"]]$pcoa$vectors %>%
-  as.data.frame() %>%
-  dplyr::select(hunting = Axis.1) %>% # positive = hunting important
-  tibble::rownames_to_column("soc_id")
 
 agriculture <- cat_results[["agriculture"]]$pcoa$vectors %>%
   as.data.frame() %>%
@@ -329,18 +205,6 @@ kinship <- cat_results[["kinship"]]$pcoa$vectors %>%
   dplyr::select(matri = Axis.1) %>% # positive = matrilineal/local
   tibble::rownames_to_column("soc_id")
 
-creation_stories <- predictors_wide0 %>% 
-  dplyr::select("SCCS676") %>% #creation stories, Sanday's variable
-  rename(creation_stories = SCCS676) %>% # high value = male_dominated
-  tibble::rownames_to_column("soc_id")
-
-fertility <- predictors_wide0 %>% 
-  dplyr::select(SCCS45, SCCS240, SCCS1130) %>% 
-  rename(weaning = SCCS45,
-         taboo = SCCS240,
-         density = SCCS1130) %>% 
-  tibble::rownames_to_column("soc_id")
-
 
 all_axes <- complexity %>%
   full_join(agriculture, by = "soc_id") %>%
@@ -350,24 +214,6 @@ all_axes <- complexity %>%
   full_join(kinship, by = "soc_id") %>%
   left_join(creation_stories,     by = "soc_id") %>%
   left_join(fertility,     by = "soc_id")
-
-# all_axes <- complexity_upstream %>%
-#   full_join(complexity_downstream, by = "soc_id") %>%
-#   full_join(agriculture, by = "soc_id") %>%
-#   full_join(herding,     by = "soc_id") %>% 
-#   full_join(hunting, by = "soc_id") %>%
-#   full_join(warfare,     by = "soc_id") %>% 
-#   full_join(kinship, by = "soc_id") %>%
-#   left_join(creation_stories,     by = "soc_id") %>% 
-#   left_join(fertility,     by = "soc_id") 
-
-
-# Correlations among predictors 
-library(corrplot)
-predictors_selected <- all_axes %>% dplyr::select(-soc_id)
-cor(predictors_selected, use = "pairwise.complete.obs") %>%
-  corrplot(method = "number")
-
 
 response_axes <- pcoa_result$vectors[,c(1:5)] %>%
   as.data.frame() %>%
@@ -384,33 +230,13 @@ pred_resp <- all_axes %>%
 
 ## Correlations of predictors and axis ####
 
+# Correlations among predictors 
+library(corrplot)
+predictors_selected <- all_axes %>% dplyr::select(-soc_id)
+cor(predictors_selected, use = "pairwise.complete.obs") %>%
+  corrplot(method = "number")
+
 predictors <- c("complexity", "agriculture_cereals", 
                 "agriculture_importance", "herding_importance",
                 "herding_milk", "hunting", "warfare_intensity",
                 "warfare_location", "matri")
-
-# map_dfr(predictors, ~{
-#   cor.test(pred_resp[[.x]], pred_resp$Axis.1, 
-#            use = "complete.obs") %>%
-#     broom::tidy() %>%
-#     mutate(predictor = .x)
-# }) %>%
-#   dplyr::select(predictor, estimate, p.value) %>%
-#   arrange(p.value)
-
-dropped <- c("weaning", "taboo", "creation_stories", "density")
-
-map_dfr(dropped, ~{
-  cor.test(pred_resp[[.x]], pred_resp$Axis.1, 
-           method = "spearman",
-           use = "complete.obs") %>%
-    broom::tidy() %>%
-    mutate(predictor = .x)
-}) %>%
-  dplyr::select(predictor, estimate, p.value) %>%
-  mutate(p.adjusted = p.adjust(p.value, method = "BH")) %>%
-  arrange(p.value)
-
-
-
-
