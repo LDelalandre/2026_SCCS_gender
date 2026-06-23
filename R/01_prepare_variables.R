@@ -1,0 +1,1 @@
+# variable coding, direction table, whyte_vars

@@ -1,3 +1,4 @@
+library(brms)
 library(tidybayes)
 library(ggplot2)
 library(patchwork)
@@ -42,17 +43,17 @@ m_axis2 %>%
 
 # 3. POSTERIOR PREDICTIVE CHECK
 # does the model reproduce the distribution of Axis.1?
-pp_check(m_axis1, ndraws = 100) +
+brms::pp_check(m_axis1, ndraws = 100) +
   labs(title = "Posterior predictive check — Axis 1") +
   theme_minimal(base_size = 13)
 
-pp_check(m_axis2, ndraws = 100) +
+brms::pp_check(m_axis2, ndraws = 100) +
   labs(title = "Posterior predictive check — Axis 2") +
   theme_minimal(base_size = 13)
 
 # 4. R²
-bayes_R2(m_axis1)
-bayes_R2(m_axis2)
+brms::bayes_R2(m_axis1)
+brms::bayes_R2(m_axis2)
 
 
 ## Additional tests ####

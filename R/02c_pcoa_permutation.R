@@ -1,5 +1,4 @@
-# 02d_pcoa_permutation.R
-# Permutation test on PCoA eigenvalue structure and variable loadings on PCo1
+# is the signal real? (vs random)
 
 source("R/02b_pcoa_core.R")  # provides: pcoa_result, mat_ord_fixed, ordinal_cols, binary_cols
 
@@ -48,7 +47,7 @@ for (i in 1:n_perm) {
 }
 
 
-# 2. Eigenvalue structure ####
+# 2. Variance explained ####
 
 obs_eigenvalues  <- pcoa_result$values$Eigenvalues
 obs_pos          <- obs_eigenvalues[obs_eigenvalues > 0]
@@ -75,7 +74,7 @@ obs_df <- data.frame(
   observed = obs_variance[1:10] * 100
 )
 
-ggplot(perm_long, aes(x = variance * 100)) +
+appendix_pcoa_permutation_variance <- ggplot(perm_long, aes(x = variance * 100)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
   geom_vline(data = obs_df, aes(xintercept = observed), color = "red", linewidth = 0.8) +
   facet_wrap(~ axis, scales = "free_x") +
@@ -85,10 +84,11 @@ ggplot(perm_long, aes(x = variance * 100)) +
        subtitle = "Red line = observed; grey = null distribution (999 permutations)") +
   theme_minimal(base_size = 11)
 
+ggsave("draft/fig/appendix_pcoa_permutation_variance.png", appendix_pcoa_permutation_variance)
 
 # 3. Variable loadings on PCo1 ####
 
-obs_site_scores  <- pcoa_result$vectors[, 1]
+obs_site_scores  <- pcoa_result$vectors[, 1] # HERE CHANGE IF I WANT TO SEE OTHER AXES
 obs_loadings_ax1 <- sapply(colnames(mat_ord_fixed), function(v) {
   vals <- as.numeric(mat_ord_fixed[[v]])
   cor(obs_site_scores, vals, method = "spearman", use = "complete.obs")
@@ -102,7 +102,9 @@ obs_loadings_df <- data.frame(
   observed = obs_loadings_ax1
 )
 
-ggplot() +
+# NB: SOME VARIABLES HAVE BEEN RECODED IN DIRECTION SINCE (for the figures)
+# Maybe they should be here too??
+pcoa_permutation_loading_ax1 <- ggplot() +
   geom_histogram(data = perm_loadings_long, aes(x = loading),
                  fill = "grey70", color = "white", bins = 40) +
   geom_vline(data = obs_loadings_df, aes(xintercept = observed),
@@ -120,7 +122,8 @@ ggplot() +
 ## 4a. Mean loading across all variables ####
 obs_mean_loading   <- mean(obs_loadings_ax1, na.rm = TRUE)
 perm_mean_loadings <- rowMeans(perm_loadings, na.rm = TRUE)
-p_mean             <- mean(abs(perm_mean_loadings) >= abs(obs_mean_loading))
+p_mean_abs             <- mean(abs(perm_mean_loadings) >= abs(obs_mean_loading))
+p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
 
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
@@ -135,6 +138,7 @@ ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
                          " — permutation p = ", round(p_mean, 3))) +
   theme_minimal(base_size = 11)
 
+
 ## 4b. Number of variables with positive loading ####
 obs_n_positive  <- sum(obs_loadings_ax1 > 0, na.rm = TRUE)
 obs_n_total     <- sum(!is.na(obs_loadings_ax1))
@@ -143,3 +147,30 @@ p_positive      <- mean(perm_n_positive >= obs_n_positive)
 
 cat("Observed positive loadings:", obs_n_positive, "/", obs_n_total, "\n")
 cat("Permutation p-value:", round(p_positive, 3), "\n")
+
+## 4.c significant loadings for individual variables ####
+
+# One-sided p-value for each variable
+# "Is the observed loading more extreme than the null distribution?"
+
+p_values_loadings <- sapply(colnames(mat_ord_fixed), function(v) {
+  obs  <- obs_loadings_ax1[v]
+  null <- perm_loadings[, v]
+  if (obs >= 0) {
+    mean(null >= obs)   # one-sided: how often does null exceed observed?
+  } else {
+    mean(null <= obs)   # one-sided: how often does null go as negative?
+  }
+})
+
+signif_vars <- p_values_loadings[p_values_loadings < 0.05] %>% names()
+p_values_loadings[p_values_loadings < 0.05/51]
+
+# Benjamini-Hochberg: controls false discovery rate rather than family-wise error
+p_adjusted <- p.adjust(p_values_loadings, method = "BH")
+signif_vars_adjusted <- p_adjusted[p_adjusted < 0.05] %>% names()
+
+whyte_vars %>% 
+  filter(var_id_whyte %in% signif_vars) %>% pull(title)
+whyte_vars %>% 
+  filter(var_id_whyte %in% signif_vars_adjusted) %>% pull(title)

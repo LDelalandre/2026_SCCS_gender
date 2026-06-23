@@ -8,7 +8,7 @@ predictors <- c("complexity", "guttman_3", "agriculture_cereals", "agriculture_i
                 "warfare_intensity", "warfare_location", "matri",
                 "creation_stories", "weaning", "taboo")
 
-axes <- paste0("Axis.", 1:8)
+axes <- paste0("Axis.", 1:5)
 
 # compute spearman correlations with p-values
 cor_table <- map_dfr(predictors, function(pred) {
@@ -38,11 +38,11 @@ library(kableExtra)
 
 cor_table %>%
   kable(caption = "Spearman correlations between predictors and response PCoA axes",
-        col.names = c("Predictor", paste0("Axis ", 1:8)),
-        align = c("l", rep("c", 8))) %>%
+        col.names = c("Predictor", paste0("Axis ", 1:5)),
+        align = c("l", rep("c", 5))) %>%
   kable_styling(bootstrap_options = c("striped", "condensed"),
                 full_width = FALSE) %>%
-  footnote(general = "† p<0.10, * p<0.05, ** p<0.01, *** p<0.001")
+  kableExtra::footnote(general = "† p<0.10, * p<0.05, ** p<0.01, *** p<0.001")
 
 
 # Models ####

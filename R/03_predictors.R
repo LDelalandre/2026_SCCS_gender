@@ -61,6 +61,11 @@ predictors_detailed <- predictors %>%
 
 write.csv(predictors_detailed, here::here("output/03_predictors_predictors_detailed.csv"), row.names = F) 
 
+pred_angarika <- read.csv("data/3.1_predictors_pred_loadings_Angarika.csv")
+
+full_join(predictors_detailed, pred_angarika) %>% 
+  write.csv("data/predictors_category.csv", row.names = F)
+
 # see the codes
 
 codes %>% 
@@ -133,7 +138,7 @@ predictors_wide <- predictors_wide0 %>%
   dplyr::select(-SCCS676) # creation stories, just one variable, no pcoa to do
 
 
-# align to the same societies as your response PCoA
+# align to the same societies as in the response PCoA
 common_soc <- intersect(rownames(predictors_wide), 
                         rownames(pcoa_result$vectors))
 predictors_wide <- predictors_wide[common_soc, ]
@@ -364,8 +369,7 @@ cor(predictors_selected, use = "pairwise.complete.obs") %>%
   corrplot(method = "number")
 
 
-
-response_axes <- pcoa_result$vectors %>%
+response_axes <- pcoa_result$vectors[,c(1:5)] %>%
   as.data.frame() %>%
   rownames_to_column("soc_id")
 

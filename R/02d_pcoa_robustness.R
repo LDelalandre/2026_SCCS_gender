@@ -1,3 +1,4 @@
+# is the signal stable?
 
 source("R/02a_pcoa_data_prep.R") 
 pcoa_result <-  readRDS(here::here("output/pcoa_result"))
