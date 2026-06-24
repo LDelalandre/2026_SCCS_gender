@@ -8,13 +8,13 @@ pcoa_result <-  readRDS(here::here("output/pcoa_result"))
 
 ## Correct direction: positive = good for women ####
 
-direction_table <- read.csv("data/SCCS/gender_response_variables_recode.csv") %>%
+direction_table <- read.csv("data/gender_response_variables_recode.csv") %>%
   select(var_id, title, women_favorable)
 
 # Correlate original variables with society PCoA scores
 var_loadings <- cor(
   mat_filtered,
-  pred_resp %>% select(Axis.1:Axis.10),
+  pred_resp %>% select(Axis.1:Axis.5),
   use = "pairwise.complete.obs"
 ) %>%
   as.data.frame() %>%
@@ -24,7 +24,7 @@ var_loadings <- cor(
 
 
 # Change the sign of the loading if it was coded as high = bad for women
-var_loadings_corrected <- variable_loadings %>%
+var_loadings_corrected <- var_loadings %>%
   left_join(direction_table, by = "var_id") %>%
   mutate(across(starts_with("Axis."), ~ . * women_favorable))
 
@@ -124,7 +124,7 @@ loadings_plot <- ggplot(vars_plot, aes(x = loading,
   geom_vline(xintercept = c(-0.30, 0.30),
              linetype = "dotted", color = "grey40", alpha = 0.7) +
   geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.3) +
-  facet_wrap(~ axis, nrow = 1) +
+  # facet_wrap(~ axis, nrow = 1) +
   scale_fill_manual(values = category_colors, name = "Domain") +
   scale_alpha_manual(values = c("FALSE" = 0.25, "TRUE" = 1), guide = "none") +
   scale_y_discrete(limits = rev) +
@@ -152,10 +152,12 @@ standalone_legend <- cowplot::get_legend(legend_plot)
 loadings_plot2 <- cowplot::plot_grid(
   standalone_legend,
   loadings_plot,
-  rel_widths = c(0.2, 1)
+  rel_widths = c(0.4, 1)
 )
 loadings_plot2
 
-ggsave("draft/fig/loadings_plot.png", loadings_plot2,
+ggsave("draft/fig/appendix_loadings_plot_full.png", loadings_plot2,
        width = 17, height = 6)
+ggsave("draft/fig/loadings_plot.png", loadings_plot2,
+       width = 8, height = 6)
 

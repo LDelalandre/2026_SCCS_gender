@@ -41,12 +41,3 @@ predictors_detailed <- predictors %>%
   filter(!var_id %in% c("SCCS729")) # fishing, also remove, I just want a simple hunting-gathering variable
 
 write.csv(predictors_detailed, here::here("output/predictors_detailed.csv"), row.names = F) 
-
-
-
-
-
-
-
-
-

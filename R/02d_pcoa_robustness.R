@@ -55,10 +55,15 @@ vars_gender <- whyte_vars$var_id_whyte
 society_stability  <- bootstrap_pcoa_stability(mat_ord_fixed, pcoa_result$vectors, 
                                                n_boot = 500, prop = 0.80, n_axes = 5, 
                                                mode = "society", seed = 42)
+society_stability$boot_r %>% summary()
+society_stability$axis_stability
 
 variable_stability <- bootstrap_pcoa_stability(mat_ord_fixed, pcoa_result$vectors, 
                                                n_boot = 500, prop = 0.80, n_axes = 5, 
                                                mode = "variable", seed = 123)
+variable_stability$boot_r %>% summary()
+variable_stability$axis_stability
+
 
 # 2. Stability by number of variables ####
 props <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
@@ -103,7 +108,7 @@ stability_by_prop <- map_dfr(seq_along(props), function(pi) {
 })
 
 
-ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
+appendix_pcoa_stability_axis1 <- ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
   geom_ribbon(aes(ymin = ci_low, ymax = ci_high), fill = "grey80") +
   geom_line(color = "steelblue", linewidth = 0.8) +
   geom_point(color = "steelblue", size = 2) +
@@ -114,6 +119,7 @@ ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
        subtitle = "Dashed line = r = 0.90 stability threshold") +
   theme_minimal(base_size = 11)
 
+ggsave("draft/fig/appendix_pcoa_stability_axis1.png", appendix_pcoa_stability_axis1)
 
 
 

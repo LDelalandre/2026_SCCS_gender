@@ -121,7 +121,8 @@ scree_plots <- lapply(names(cat_results), function(cat) {
 })
 names(scree_plots) <- names(cat_results)
 
-wrap_plots(scree_plots, ncol = 3)
+appendix_predictors_pcoa <- wrap_plots(scree_plots, ncol = 3)
+ggsave("draft/fig/appendix_predictors_pcoa.png", appendix_predictors_pcoa)
 
 
 ## Inspect the PCoAs ####

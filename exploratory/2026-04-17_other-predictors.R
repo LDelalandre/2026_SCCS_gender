@@ -609,44 +609,7 @@ library(dagitty)
 
 # I put ecology upstream because herding and agri_cereals are negatively correlated
 
-# DAG A: technology drives complexity
-dag_A_revised <- dagitty('dag {
-  ecology -> agri_cereals
-  ecology -> herding_importance
-  agri_cereals -> guttman_3
-  herding_importance -> guttman_3
-  guttman_3 -> complexity
-  guttman_3 -> Ax1
-  complexity -> Ax1
-}')
-
-dag_B_revised <- dagitty('dag {
-  ecology -> agri_cereals
-  ecology -> herding_importance
-  agri_cereals -> complexity
-  herding_importance -> complexity
-  complexity -> guttman_3
-  guttman_3 -> Ax1
-}')
-
-dag_C_revised <- dagitty('dag {
-  ecology -> agri_cereals
-  ecology -> herding_importance
-  agri_cereals -> complexity
-  agri_cereals -> guttman_3
-  herding_importance -> complexity
-  herding_importance -> guttman_3
-  complexity -> Ax1
-  guttman_3 -> Ax1
-}')
-
-plot(dag_A_revised)
-plot(dag_B_revised)
-plot(dag_C_revised)
-
-  impliedConditionalIndependencies(dag_A_revised)
-impliedConditionalIndependencies(dag_B_revised)
-impliedConditionalIndependencies(dag_C_revised)
+s
 
 # First, I cannot test ecology
 

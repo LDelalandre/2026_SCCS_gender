@@ -128,7 +128,7 @@ p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
 
-ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
+appendix_pcoa_mean_loading_axis1 <- ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
   geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
   labs(x        = "Mean loading across all variables on PCo1",
@@ -138,6 +138,7 @@ ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
                          " — permutation p = ", round(p_mean, 3))) +
   theme_minimal(base_size = 11)
 
+ggsave("draft/fig/appendix_pcoa_mean_loading_axis1.png", appendix_pcoa_mean_loading_axis1)
 
 ## 4b. Number of variables with positive loading ####
 obs_n_positive  <- sum(obs_loadings_ax1 > 0, na.rm = TRUE)

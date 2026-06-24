@@ -130,14 +130,6 @@ coords_extended %>%
   ggtitle("All the regions grouped")
 
 
-coords_extended %>% 
-  ggplot(aes(x = Ax4, y = height_ratio)) +
-  geom_point() +
-  theme_classic() +
-  ggtitle("All the regions grouped")
-
-
-
 
 
 
@@ -155,7 +147,7 @@ if (run_model == T){
               prior(normal(0, 0.5), class = Intercept),
               prior(exponential(1), class = sd),
               prior(exponential(1), class = sigma)),
-    data = coords_extended,
+    data = coords_extended %>% arrange(Axis.1),
     cores = 4, iter = 4000, seed = 42,
     control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
   )
@@ -170,7 +162,7 @@ mod_domination_size %>% summary()
 
 mod_domination_size %>% bayes_R2()
 
-coords_extended %>%
+biplot_dimorphism <- coords_extended %>%
   tidybayes::add_epred_draws(mod_domination_size, ndraws = 100) %>%
   ggplot(aes(x = Ax1, y = height_ratio)) +
   tidybayes::stat_lineribbon(aes(y = .epred), 
@@ -181,6 +173,7 @@ coords_extended %>%
   labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
 
+ggsave("draft/fig/biplot_dimorphism.png", biplot_dimorphism)
 
 coords_extended %>% 
   ggplot(aes(x = Ax1, y = height_ratio)) +
@@ -214,7 +207,7 @@ if (run_model == T){
               prior(normal(0, 0.5), class = Intercept),
               prior(exponential(1), class = sd),
               prior(exponential(1), class = sigma)),
-    data = pred_resp_dimorphism,
+    data = pred_resp_dimorphism %>% arrange(complexity),
     cores = 4, iter = 4000, seed = 42,
     control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
   )

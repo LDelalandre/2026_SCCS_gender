@@ -8,7 +8,9 @@ predictors <- c("complexity", "technology", "agriculture_cereals", "agriculture_
 
 # 0. List of variables retained ####
 
-predictors_detailed
+predictors_detailed %>% 
+  left_join(variables %>% select(var_id, source), by = "var_id") %>% 
+  write.csv(., "draft/tbl/appendix_predictors.csv", row.names = F)
 #TODO: add some more information (dataset of origin, etc.)
 
 # 1. Correlation among predictors ####
@@ -60,7 +62,7 @@ colnames(cor_table_pred) <- short_names[colnames(cor_table_pred)]
 # Upper triangle only
 cor_table_pred[lower.tri(cor_table_pred, diag = TRUE)] <- ""
 
-write.csv(cor_table_pred, "output/predictor_correlations.csv")
+write.csv(cor_table_pred, "draft/tbl/appendix_predictor_correlations.csv")
 
 
 
@@ -90,6 +92,8 @@ cor_table <- map_dfr(predictors, function(pred) {
 })
 
 print(cor_table)
+
+write.csv(cor_table, "draft/tbl/appendix_correlation_predictors_axes.csv", row.names = F)
 
 library(knitr)
 library(kableExtra)
@@ -126,9 +130,9 @@ table_final <- map_dfr(names(models), function(nm) {
   other <- coefs %>% filter(term != "technology")
   
   data.frame(
-    `Controlling variable` = nm,
     `Technology β`         = round(tech$estimate, 3),
     `Technology p`         = fmt_p(tech$p.value),
+    `Added variable` = nm,
     `Added variable β`     = round(other$estimate, 3),
     `Added variable p`     = fmt_p(other$p.value),
     check.names = FALSE
@@ -139,5 +143,5 @@ print(table_final)
 
 # Save
 write.csv(table_final, 
-          here::here("output/03d_technology_mediation_table.csv"), 
+          here::here("draft/tbl/appendix_technology_mediation_table.csv"), 
           row.names = FALSE)

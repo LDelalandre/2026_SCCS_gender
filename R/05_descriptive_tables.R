@@ -6,12 +6,7 @@ library(flextable)
 whyte_category_angarika %>%
   filter(!is.na(category_whyte)) %>%
   filter(!is.na(var_id)) %>%
-  flextable() %>%
-  set_header_labels(
-    var_id = "SCCS ID", code = "Code", full_name = "Full name",
-    short_name = "Short name", category_whyte = "Whyte domain",
-    our_category = "Our category") %>%
-  save_as_docx(path = "draft/Appendix_TableS1_variables.docx")
+  write.csv2(., "draft/tbl/appendix_gender_variables.csv", row.names = F)
 
 library(flextable)
 library(officer)
@@ -65,7 +60,7 @@ save_as_docx(ft,
              pr_section = officer::prop_section(
                page_size = officer::page_size(orient = "landscape")
              ),
-             path = "draft/Appendix_TableS1_variables.docx")
+             path = "draft/tbl/Appendix_TableS1_variables.docx")
 
 # Table societies ####
 # 
@@ -79,8 +74,7 @@ save_as_docx(ft,
 # #   "SCCS157"  # Subsistence economy (Murdock)
 # # )
 # 
-# society_profile <- societies %>%
-#   select(soc_id, main_focal_year,HRAF_name_ID, HRAF_link)
+
 # 
 # # Check which exist in your data
 # variables %>% 
@@ -101,12 +95,16 @@ save_as_docx(ft,
 # 
 # # ── Master coords table with all metadata ────────────────────────────────────
 
+society_profile <- societies %>%
+  select(soc_id, main_focal_year,HRAF_name_ID, HRAF_link)
+
 coord_societies <- coords_df %>%
   left_join(society_profile, by = "soc_id") %>%
   # left_join(context_wide, by = "soc_id") %>% 
   arrange(Ax1) %>% 
   select(pref_name_for_society, soc_id, Ax1, main_focal_year, region, origLat, origLong,
-         HRAF_name_ID, HRAF_link)
+         HRAF_name_ID, HRAF_link) %>% 
+  mutate(Ax1 = round(Ax1, digits = 3))
 
 
 # Save with URL recognition
@@ -126,15 +124,9 @@ writeFormula(wb, "Sheet1",
              startRow = 2
 )
 
-saveWorkbook(wb, here::here("output/2.2_pcoa_figures_coord_societies.xlsx"), overwrite = TRUE)
+saveWorkbook(wb, here::here("draft/tbl/appendix_coords_societies.xlsx"), overwrite = TRUE)
 
-#TODO: add dimorphism (gleeson) info??
 
-predictors_wide %>% 
-  ggplot(aes(x = SCCS729, y = SCCS730)) +
-  geom_point() + geom_jitter()
-
-cor(predictors_wide$SCCS729, predictors_wide$SCCS730)
 
 
 
