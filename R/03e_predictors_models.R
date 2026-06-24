@@ -1,48 +1,6 @@
 
 
-# Correlations ####
 
-# define your predictors and axes
-predictors <- c("complexity", "guttman_3", "agriculture_cereals", "agriculture_importance",
-                "herding_importance", "herding_milk", "hunting",
-                "warfare_intensity", "warfare_location", "matri",
-                "creation_stories", "weaning", "taboo")
-
-axes <- paste0("Axis.", 1:5)
-
-# compute spearman correlations with p-values
-cor_table <- map_dfr(predictors, function(pred) {
-  map_dfc(axes, function(ax) {
-    if (ax %in% names(pred_resp) & pred %in% names(pred_resp)) {
-      test <- cor.test(pred_resp[[pred]], pred_resp[[ax]],
-                       method = "spearman",
-                       use = "complete.obs")
-      tibble(!!ax := sprintf("%.2f%s",
-                             test$estimate,
-                             case_when(test$p.value < 0.001 ~ "***",
-                                       test$p.value < 0.01  ~ "**",
-                                       test$p.value < 0.05  ~ "*",
-                                       test$p.value < 0.10  ~ "†",
-                                       TRUE                 ~ "")))
-    } else {
-      tibble(!!ax := NA_character_)
-    }
-  }) %>%
-    mutate(predictor = pred, .before = 1)
-})
-
-print(cor_table)
-
-library(knitr)
-library(kableExtra)
-
-cor_table %>%
-  kable(caption = "Spearman correlations between predictors and response PCoA axes",
-        col.names = c("Predictor", paste0("Axis ", 1:5)),
-        align = c("l", rep("c", 5))) %>%
-  kable_styling(bootstrap_options = c("striped", "condensed"),
-                full_width = FALSE) %>%
-  kableExtra::footnote(general = "† p<0.10, * p<0.05, ** p<0.01, *** p<0.001")
 
 
 # Models ####
@@ -50,11 +8,8 @@ library("brms")
 run_models <- F
 
 if (run_models){
-  m_axis1 <- brm(Axis.1 ~ complexity + 
-                   herding_importance +
-                   mo(matri_cat) + 
-                   hunting,
-                 data = pred_resp,
+  m_axis1 <- brm(Axis.1 ~ complexity + mo(matri_cat),
+                 data = pred_resp %>% drop_na(Axis.1, complexity, matri_cat),
                  family = gaussian(),
                  prior = c(prior(normal(0, 1), class = b),
                            prior(normal(0, 1), class = Intercept),
@@ -71,20 +26,20 @@ if (run_models){
 summary(m_axis1)
 bayestestR::pd(m_axis1)
 
-if (run_models){
-  m_axis2 <- brm(Axis.2 ~ hunting + 
-                   agriculture_importance,
-                 data = pred_resp,
-                 family = gaussian(),
-                 prior = c(prior(normal(0, 1), class = b),
-                           prior(normal(0, 1), class = Intercept),
-                           prior(exponential(1), class = sigma)),
-                 cores = 4, iter = 4000, seed = 42)
-  
-  saveRDS(m_axis2, here::here("output/models/m_axis2"))
-} else{
-  m_axis2 <- readRDS(here::here("output/models/m_axis2"))
-}
+# if (run_models){
+#   m_axis2 <- brm(Axis.2 ~ hunting + 
+#                    agriculture_importance,
+#                  data = pred_resp,
+#                  family = gaussian(),
+#                  prior = c(prior(normal(0, 1), class = b),
+#                            prior(normal(0, 1), class = Intercept),
+#                            prior(exponential(1), class = sigma)),
+#                  cores = 4, iter = 4000, seed = 42)
+#   
+#   saveRDS(m_axis2, here::here("output/models/m_axis2"))
+# } else{
+#   m_axis2 <- readRDS(here::here("output/models/m_axis2"))
+# }
 
 
 
@@ -212,3 +167,69 @@ bayestestR::pd(m_creation_full)
 cor.test(as.numeric(pred_resp$matri_cat), 
          as.numeric(pred_resp$creation_stories_ord),
          method = "spearman")
+
+
+
+# Technology scale ####
+
+
+model_techno_complete <- pred_resp %>%
+  select(Axis.1, weaving, irrigation, plow, complexity, technology) %>%
+  drop_na()
+
+m0 <- lm(Axis.1 ~ 1,                           data = model_techno_complete)
+m1 <- lm(Axis.1 ~ weaving,                     data = model_techno_complete)
+m2 <- lm(Axis.1 ~ weaving + irrigation,        data = model_techno_complete)
+m3 <- lm(Axis.1 ~ weaving + irrigation + plow, data = model_techno_complete)
+anova(m0, m1, m2, m3)
+
+
+
+# Among societies WITH weaving, does having a plow add anything?
+model_techno_complete %>%
+  filter(weaving == 1) %>%
+  lm(Axis.1 ~ plow, data = .) %>%
+  summary()
+
+# Among societies WITHOUT plow, does weaving still predict?
+model_techno_complete %>%
+  filter(plow == 0) %>%
+  lm(Axis.1 ~ weaving, data = .) %>%
+  summary()
+
+model_techno_complete %>%
+  filter(plow == 0) %>% 
+  group_by(weaving) %>% 
+  summarize(n = n())
+
+# weaving-irrigation
+model_techno_complete %>%
+  filter(weaving == 1) %>%
+  lm(Axis.1 ~ irrigation, data = .) %>%
+  summary()
+model_techno_complete %>%
+  filter(irrigation == 0) %>%
+  lm(Axis.1 ~ weaving, data = .) %>%
+  summary()
+
+# irrigation-plow
+model_techno_complete %>%
+  filter(irrigation == 1) %>%
+  lm(Axis.1 ~ plow, data = .) %>%
+  summary()
+model_techno_complete %>%
+  filter(plow == 0) %>%
+  lm(Axis.1 ~ irrigation, data = .) %>%
+  summary()
+
+
+# Does plow predict Ax1 completely independently of weaving and irrigation?
+model_techno_complete %>%
+  filter(weaving == 0 & plow ==1)
+
+
+
+summary(lm(Axis.1 ~ complexity + weaving, data = model_techno_complete))
+summary(lm(Axis.1 ~ complexity + irrigation, data = model_techno_complete))
+summary(lm(Axis.1 ~ complexity + plow, data = model_techno_complete))
+summary(lm(Axis.1 ~ complexity + technology, data = model_techno_complete))

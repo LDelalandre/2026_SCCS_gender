@@ -136,8 +136,6 @@ predictors_wide %>%
 
 cor(predictors_wide$SCCS729, predictors_wide$SCCS730)
 
-# Table predictors ####
-
 
 
 

@@ -205,15 +205,17 @@ kinship <- cat_results[["kinship"]]$pcoa$vectors %>%
   dplyr::select(matri = Axis.1) %>% # positive = matrilineal/local
   tibble::rownames_to_column("soc_id")
 
-
+hunting <- predictors_data %>% 
+  filter(var_id == "SCCS730") %>%  # importance of hunting and gathering in subsistence
+  rename(hunting = code) %>% 
+  dplyr::select(soc_id, hunting)
+  
 all_axes <- complexity %>%
   full_join(agriculture, by = "soc_id") %>%
   full_join(herding,     by = "soc_id") %>%
-  full_join(hunting, by = "soc_id") %>%
   full_join(warfare,     by = "soc_id") %>%
-  full_join(kinship, by = "soc_id") %>%
-  left_join(creation_stories,     by = "soc_id") %>%
-  left_join(fertility,     by = "soc_id")
+  full_join(kinship, by = "soc_id") %>% 
+  left_join(hunting, by = "soc_id")
 
 response_axes <- pcoa_result$vectors[,c(1:5)] %>%
   as.data.frame() %>%
@@ -228,15 +230,4 @@ pred_resp <- all_axes %>%
     matri >= 0.5   ~ "matri"
   ) %>% ordered(levels = c("non_matri", "intermediate", "matri")))
 
-## Correlations of predictors and axis ####
 
-# Correlations among predictors 
-library(corrplot)
-predictors_selected <- all_axes %>% dplyr::select(-soc_id)
-cor(predictors_selected, use = "pairwise.complete.obs") %>%
-  corrplot(method = "number")
-
-predictors <- c("complexity", "agriculture_cereals", 
-                "agriculture_importance", "herding_importance",
-                "herding_milk", "hunting", "warfare_intensity",
-                "warfare_location", "matri")
