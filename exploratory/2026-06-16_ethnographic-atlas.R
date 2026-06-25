@@ -14,19 +14,26 @@ codes_ea <- read.csv(here::here("data/EA/codes.csv")) %>%
   left_join(variables_ea %>% select(var_id, title))
 
 
-# CLAUDE
-
 # Step 1: parse the EA society ID from the mapping
 # "EA: Barama Carib (Sc3) [Sc3]" -> "Sc3"
+
 societies_mapping_parsed <- societies_mapping %>%
-  mutate(ea_soc_id = str_extract(related, "(?<=\\[)[A-Za-z0-9]+(?=\\])")) %>%
-  filter(str_starts(related, "EA:")) %>%   # keep only EA links, not other databases
-  select(soc_id, ea_soc_id)                # soc_id = SCCS id, ea_soc_id = EA id
+  mutate(soc_id = str_extract_all(related, "[A-Z][a-z]\\d+[a-z]?")) %>%
+  unnest(soc_id) %>% 
+  select(soc_id, soc_id_ea) %>% 
+  unique()
+
+
+# Load EA variables on SCCS ####
 
 # Step 2: extract EA variables for your societies of interest
 ea_vars_of_interest <- c("EA078", "EA043", "EA011", "EA044", "EA045", "EA046", "EA047", "EA048", "EA049",
                          "EA050", "EA051", "EA052", "EA053", "EA054",
                          "EA006")
+variables_ea %>% 
+  filter(var_id %in% ea_vars_of_interest) %>% 
+  View
+
 
 ea_subset <- ea %>%
   filter(var_id %in% ea_vars_of_interest) %>%
@@ -78,24 +85,16 @@ ea_loadings <- ea_loadings %>%
     group = "EA variables"   # or split by theme if you want facets
   )
 
-ea_subset <- ea %>%
-  filter(var_id %in% ea_vars_of_interest) %>%
-  filter(!is.na(code)) %>%
-  group_by(soc_id, var_id) %>%
-  slice(1) %>%   # or slice_max(year) if year is available
-  ungroup() %>%
-  rename(ea_soc_id = soc_id)
-
 societies_mapping_parsed %>% count(soc_id) %>% filter(n > 1)
 
 
 
 
-# PLOT ####
+## plot ####
 
 # ── Labels ────────────────────────────────────────────────────────────────────
 
-sccs_loadings <- sccs_loadings %>%
+sccs_loadings <- var_loadings %>%
   mutate(source = "SCCS")
 
 all_loadings <- bind_rows(sccs_loadings, ea_loadings)
@@ -120,3 +119,21 @@ ea_loadings %>%
        y     = "PCo2 (work segregation)",
        title = "EA variables projected on main PCoA axes")
 
+
+# PCoA on EA data ####
+
+ea_vars_of_interest2 <- c("EA078", "EA043", "EA011", "EA044", "EA045", "EA046", "EA048",
+                         "EA050", "EA051", "EA052", "EA053", "EA054")
+
+ea_subset_fvar <- ea %>%
+  filter(var_id %in% ea_vars_of_interest2) %>%
+  filter(!is.na(code)) %>%
+  group_by(soc_id, var_id) %>%
+  slice(1) %>%   # or slice_max(year) if year is available
+  ungroup() %>%
+  rename(ea_soc_id = soc_id)
+
+
+ea_subset_fvar_fsoc <- ea_subset_fvar %>% 
+  filter(ea_soc_id %in% societies_mapping_clean$code)
+  

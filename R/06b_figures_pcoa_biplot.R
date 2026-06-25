@@ -42,6 +42,7 @@ society_subsistence_type %>%
 pcoa_biplot_subsistence <- pred_resp %>%
   left_join(society_subsistence_type, by = "soc_id") %>% 
   left_join(coords_df) %>% 
+  filter(!str_detect(label, "Trade")) %>%  # remove trade panel
   ggplot(aes(x = Axis.1, y = Axis.2, shape = region)) +
   geom_point() +
   # ggrepel::geom_text_repel(aes(label = pref_name_for_society)) +
@@ -70,6 +71,27 @@ pcoa_biplot_subsistence <- pred_resp %>%
   ) 
 
 ggsave("draft/fig/pcoa_biplot_subsistence.png", pcoa_biplot_subsistence)
+
+
+boxplot_subsistence_status <- pred_resp %>%
+  left_join(society_subsistence_type) %>%
+  filter(!str_detect(label, "Trade"), !is.na(label)) %>%
+  mutate(SCCS820_num = as.numeric(as.character(SCCS820))) %>%
+  add_count(label, name = "n") %>%
+  mutate(
+    label_n = paste0(label, " (n=", n, ")"),
+    label_n = fct_rev(fct_reorder(label_n, SCCS820_num, .fun = min))
+  ) %>%
+  ggplot(aes(x = Axis.1, y = label_n)) +
+  geom_boxplot(size = 1) +
+  # geom_jitter(height = 0.15, alpha = 0.6, size = 2) +
+  # stat_summary(fun = median, geom = "point",
+  #              shape = 124, size = 8, color = "steelblue") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "Axis 1 (women's status)", y = NULL) +
+  theme_minimal(base_size = 11)
+
+ggsave("output/boxplot_subsistence_status.png",boxplot_subsistence_status, width = 5, height = 4)
 
 # map societies ####
 library(maps)

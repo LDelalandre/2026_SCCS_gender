@@ -1,4 +1,4 @@
-source("01_import.R")
+source("R/01_import.R")
 library(flextable)
 
 # Table response variables ####

@@ -114,11 +114,11 @@ library(broom)
 library(tidyverse)
 
 models <- list(
-  "Agriculture type" = lm(Axis.1 ~ technology + agriculture_cereals, data = model_data),
-  "Herding"          = lm(Axis.1 ~ technology + herding_importance,  data = model_data),
-  "Hunting"          = lm(Axis.1 ~ technology + hunting,          data = model_data),
-  "Complexity"       = lm(Axis.1 ~ technology + complexity,          data = model_data),
-  "Matrilineality"   = lm(Axis.1 ~ technology + matri,               data = model_data)
+  "Agriculture type" = lm(Axis.1 ~ technology + agriculture_cereals, data = pred_resp),
+  "Herding"          = lm(Axis.1 ~ technology + herding_importance,  data = pred_resp),
+  "Hunting"          = lm(Axis.1 ~ technology + hunting,          data = pred_resp),
+  "Complexity"       = lm(Axis.1 ~ technology + complexity,          data = pred_resp),
+  "Matrilineality"   = lm(Axis.1 ~ technology + matri,               data = pred_resp)
 )
 
 fmt_p <- function(p) ifelse(p < 0.001, "<0.001", as.character(round(p, 3)))
