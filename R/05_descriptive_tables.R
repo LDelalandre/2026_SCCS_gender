@@ -114,9 +114,6 @@ predictors <- c("complexity", "technology", "agriculture_cereals", "agriculture_
                 "herding_importance", "herding_milk", "hunting",
                 "warfare_intensity", "warfare_location", "matri")
 
-
-# 0. List of variables retained ####
-
 predictors_detailed %>% 
   left_join(variables %>% select(var_id, source), by = "var_id") %>% 
   write.csv(., "draft/tbl/appendix_predictors.csv", row.names = F)
@@ -163,20 +160,157 @@ predictors_loadings <- flextable(table_loadings) %>%
   font(fontname = "Times New Roman", part = "all") %>%
   fontsize(size = 10, part = "all") %>%
   # Caption
-  set_caption("Table S1. PCoA variable loadings by category. Values represent correlations between each variable and the principal coordinate axes. Strong loadings (|r| > 0.5) are shown in red.")
+  set_caption("Table S3: PCoA variable loadings by category. Values represent 
+              correlations between each variable and the principal coordinate axes. 
+              Strong loadings (|r| > 0.5) are shown in red.")
 
-# Save to Word
 save_as_docx(predictors_loadings, path = "draft/tbl/appendix_predictors_loadings.docx")
 
+
+## Correlation among predictors ####
+
+library(corrplot)
+predictors_selected <- pred_resp %>% dplyr::select(all_of(predictors))
+
+cor_matrix <- cor(predictors_selected, use = "pairwise.complete.obs")
+
+# Format as clean table with stars
+# Fix: vectorize the function
+format_cor <- function(mat) {
+  out <- matrix("", nrow = nrow(mat), ncol = ncol(mat))
+  for (i in 1:nrow(mat)) {
+    for (j in 1:ncol(mat)) {
+      r <- mat[i, j]
+      if (i == j) { out[i, j] <- "—"; next }
+      stars <- if (abs(r) >= 0.5) "***" else if (abs(r) >= 0.4) "**" else
+        if (abs(r) >= 0.3) "*"  else if (abs(r) >= 0.2) "†"  else ""
+      out[i, j] <- paste0(sprintf("%.2f", r), stars)
+    }
+  }
+  as.data.frame(out, row.names = rownames(mat))
+}
+
+cor_table_pred <- as.data.frame(format_cor(cor_matrix))
+colnames(cor_table_pred) <- colnames(cor_matrix)
+rownames(cor_table_pred) <- rownames(cor_matrix)
+
+# Short names for readability
+short_names <- c(
+  "complexity"             = "Complexity",
+  "technology"             = "Technology",
+  "agriculture_cereals"    = "Agri. type",
+  "agriculture_importance" = "Agri. importance",
+  "herding_importance"     = "Herding",
+  "herding_milk"           = "Herding milk",
+  "hunting"                = "Hunting",
+  "warfare_intensity"      = "Warfare intensity",
+  "warfare_location"       = "Warfare location",
+  "matri"                  = "Matrilineality"
+)
+
+rownames(cor_table_pred) <- short_names[rownames(cor_table_pred)]
+colnames(cor_table_pred) <- short_names[colnames(cor_table_pred)]
+
+# Upper triangle only
+cor_table_pred[lower.tri(cor_table_pred, diag = TRUE)] <- ""
+
+table_pred_correlations <- cor_table_pred %>% 
+  rownames_to_column("Variable category") %>% 
+  flextable() %>% 
+  set_caption("Table S4: Correlations among synthetic predictors.")
+
+
+save_as_docx(table_pred_correlations, path = "draft/tbl/table_pred_correlations.docx")
+
+
+## Correlations between pred and resp ####
+
+axes <- paste0("Axis.", 1:5)
+
+# compute spearman correlations with p-values
+cor_table <- map_dfr(predictors, function(pred) {
+  map_dfc(axes, function(ax) {
+    if (ax %in% names(pred_resp) & pred %in% names(pred_resp)) {
+      test <- cor.test(pred_resp[[pred]], pred_resp[[ax]],
+                       method = "spearman",
+                       use = "complete.obs")
+      tibble(!!ax := sprintf("%.2f%s",
+                             test$estimate,
+                             case_when(test$p.value < 0.001 ~ "***",
+                                       test$p.value < 0.01  ~ "**",
+                                       test$p.value < 0.05  ~ "*",
+                                       test$p.value < 0.10  ~ "†",
+                                       TRUE                 ~ "")))
+    } else {
+      tibble(!!ax := NA_character_)
+    }
+  }) %>%
+    mutate(predictor = pred, .before = 1)
+})
+
+table_cor_pred_axes <- cor_table %>% 
+  flextable() %>% 
+  set_caption("Table S5: Correlation between synthetic predictors and 
+              the axes of the PCoA on women status variables. 
+              Significance of Spearman correlation test: † p<0.10, * p<0.05, 
+              ** p<0.01, *** p<0.001).")
+
+save_as_docx(table_cor_pred_axes, path = "draft/tbl/table_cor_pred_axes.docx")
+
+
+## Effect of technology ####
+
+library(broom)
+
+models <- list(
+  "Agriculture type" = lm(Axis.1 ~ technology + agriculture_cereals, data = pred_resp),
+  "Herding"          = lm(Axis.1 ~ technology + herding_importance,  data = pred_resp),
+  "Hunting"          = lm(Axis.1 ~ technology + hunting,          data = pred_resp),
+  "Complexity"       = lm(Axis.1 ~ technology + complexity,          data = pred_resp),
+  "Matrilineality"   = lm(Axis.1 ~ technology + matri,               data = pred_resp)
+)
+
+fmt_p <- function(p) ifelse(p < 0.001, "<0.001", as.character(round(p, 3)))
+
+mod_technology <- map_dfr(names(models), function(nm) {
+  coefs <- tidy(models[[nm]]) %>% filter(term != "(Intercept)")
+  
+  tech  <- coefs %>% filter(term == "technology")
+  other <- coefs %>% filter(term != "technology")
+  
+  data.frame(
+    `Technology β`         = round(tech$estimate, 3),
+    `Technology p`         = fmt_p(tech$p.value),
+    `Added variable` = nm,
+    `Added variable β`     = round(other$estimate, 3),
+    `Added variable p`     = fmt_p(other$p.value),
+    check.names = FALSE
+  )
+})
+
+table_technology <- mod_technology %>% 
+  flextable() %>% 
+  set_caption("Table S6: Effect of technology in pair with other predictors.")
+
+save_as_docx(table_technology, path ="draft/tbl/table_technology.docx")
+
+
+# Save all ####
 
 save_as_docx(
   table_resp,
   table_societies,
   predictors_loadings,
+  
+  table_pred_correlations,
+  table_cor_pred_axes,
+  
+  table_technology,
+  
   pr_section = officer::prop_section(
     page_size = officer::page_size(orient = "portrait")
   ),
-  path = "draft/tbl/appendix.docx"
+  path = "draft/tbl/appendix_tables.docx"
 )
 
 
