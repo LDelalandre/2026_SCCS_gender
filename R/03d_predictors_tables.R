@@ -1,17 +1,17 @@
 library(tidyverse)
 
 
-predictors <- c("complexity", "technology", "agriculture_cereals", "agriculture_importance",
-                "herding_importance", "herding_milk", "hunting",
-                "warfare_intensity", "warfare_location", "matri")
 
 
-# 0. List of variables retained ####
 
-predictors_detailed %>% 
-  left_join(variables %>% select(var_id, source), by = "var_id") %>% 
-  write.csv(., "draft/tbl/appendix_predictors.csv", row.names = F)
-#TODO: add some more information (dataset of origin, etc.)
+# Predictors PCoA ####
+# write.csv(predictors_detailed, "output/predictors_detailed.csv")
+# write.csv(pred_loadings, "output/pred_loadings.csv")
+
+
+library(flextable)
+library(dplyr)
+
 
 # 1. Correlation among predictors ####
 

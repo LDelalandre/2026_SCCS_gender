@@ -141,13 +141,13 @@ run_model <- F
 
 if (run_model == T){
   mod_domination_size <- brm(
-    height_ratio ~ Ax1  + (1|region), # + (1|language_family) # not enough data points to do so
+    height_ratio ~ Ax1 + (1|region), # + (1|language_family) # not enough data points to do so
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
               prior(normal(0, 0.5), class = Intercept),
               prior(exponential(1), class = sd),
               prior(exponential(1), class = sigma)),
-    data = coords_extended %>% arrange(Axis.1),
+    data = coords_extended,
     cores = 4, iter = 4000, seed = 42,
     control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
   )
@@ -158,18 +158,31 @@ if (run_model == T){
 mod_domination_size <- readRDS(here::here("output/2026-03-19_whyte_mod_domination_size.rds"))
 
 
-mod_domination_size %>% summary()
+r2 <- mod_domination_size %>% bayes_R2() 
+beta <- fixef(mod_domination_size)["Ax1", ]
+n <- nrow(drop_na(coords_extended, Ax1, height_ratio))
 
-mod_domination_size %>% bayes_R2()
+label_text <- paste0(
+  "R² = ", round(r2[1, "Estimate"], 2),
+  " [", round(r2[1, "Q2.5"], 2), ", ", round(r2[1, "Q97.5"], 2), "]\n",
+  "β = ", round(beta["Estimate"], 2),
+  " [", round(beta["Q2.5"], 2), ", ", round(beta["Q97.5"], 2), "]\n",
+  "n = ", n
+)
 
 biplot_dimorphism <- coords_extended %>%
-  tidybayes::add_epred_draws(mod_domination_size, ndraws = 100) %>%
+  tidybayes::add_epred_draws(mod_domination_size, ndraws = 100, re_formula = NA) %>%
   ggplot(aes(x = Ax1, y = height_ratio)) +
-  tidybayes::stat_lineribbon(aes(y = .epred), 
-                             .width = c(0.5, 0.95), 
-                             alpha = 0.3, 
+  tidybayes::stat_lineribbon(aes(y = .epred),
+                             .width = c(0.5, 0.95),
+                             alpha = 0.3,
                              fill = "steelblue") +
   geom_point() +
+  annotate("text", 
+           x = min(coords_extended$Ax1, na.rm = TRUE), 
+           y = max(coords_extended$height_ratio, na.rm = TRUE),
+           label = label_text,
+           hjust = 0, vjust = 1, size = 3.2, family = "mono") +
   labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
 

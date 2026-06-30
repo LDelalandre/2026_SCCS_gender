@@ -1,0 +1,134 @@
+---
+title: "Appendix S1 - Detailed checklist"
+format: 
+  docx:
+    colorlinks: true
+execute:
+  cache: false # true not to re-run chunks already executed
+  echo: false
+  warning: false
+  error: false
+editor: visual
+# bibliography: references.bib
+---
+
+```{r, results='asis'}
+cat("\\makeatletter\\@ifpackageloaded{colortbl}{}{\\usepackage{colortbl}}\\makeatother\n")
+cat("\\captionsetup[table]{labelformat=empty}\n")
+```
+
+**Supplementary information** to the article *XX*
+
+**Authors**: XX
+
+**Journal**: XX
+
+```{r, results='asis'}
+cat("\\listoftables\n")
+cat("\\clearpage\n")
+```
+
+```{r}
+library(tidyverse)
+library(kableExtra)
+pred_loadings <- read.csv(here::here("output/pred_loadings.csv"))
+predictors_detailed <- read.csv(here::here("output/predictors_detailed.csv"))
+```
+
+```{r, results='asis'}
+# Shrink margins for all tables using longtable's built-in controls
+cat("\\setlength{\\LTleft}{-1cm}\\setlength{\\LTright}{-1cm}\n")
+cat("\\setlength{\\LTpre}{2pt}\\setlength{\\LTpost}{2pt}\n")
+
+cat("\\widowpenalty=10000\n")
+cat("\\clubpenalty=10000\n")
+
+library(kableExtra)
+
+# Préparer les données
+table_loadings <- pred_loadings %>%
+  mutate(across(Co1:Co4, ~ round(.x, 3))) %>% 
+  left_join(predictors_detailed %>% select(title, var_id)) %>%
+  rename(
+    Category   = category,
+    Variable   = title,
+    ID = var_id,
+    `Axis 1`   = Co1,
+    `Axis 2`   = Co2,
+    `Axis 3`   = Co3,
+    `Axis 4`   = Co4
+  ) %>% 
+  select(Category, Variable, ID, everything()) 
+
+table_loadings_kbl <- table_loadings
+
+# Repérer les lignes à colorer en rouge par axe
+red1 <- which(abs(table_loadings_kbl$`Axis 1`) > 0.5)
+red2 <- which(abs(table_loadings_kbl$`Axis 2`) > 0.5)
+red3 <- which(abs(table_loadings_kbl$`Axis 3`) > 0.5)
+red4 <- which(abs(table_loadings_kbl$`Axis 4`) > 0.5)
+
+# Appliquer cell_spec pour les loadings forts
+table_loadings_kbl <- table_loadings_kbl %>%
+  mutate(
+    `Axis 1` = ifelse(abs(`Axis 1`) > 0.5,
+      cell_spec(`Axis 1`, color = "#C00000"), as.character(`Axis 1`)),
+    `Axis 2` = ifelse(abs(`Axis 2`) > 0.5,
+      cell_spec(`Axis 2`, color = "#C00000"), as.character(`Axis 2`)),
+    `Axis 3` = ifelse(abs(`Axis 3`) > 0.5,
+      cell_spec(`Axis 3`, color = "#C00000"), as.character(`Axis 3`)),
+    `Axis 4` = ifelse(abs(`Axis 4`) > 0.5,
+      cell_spec(`Axis 4`, color = "#C00000"), as.character(`Axis 4`))
+  )
+
+# Alternating category shading — repérer les lignes des catégories paires
+unique_cats <- unique(table_loadings$Category)
+even_cats <- unique_cats[c(FALSE, TRUE)]
+stripe_rows <- which(table_loadings$Category %in% even_cats)
+
+# Groupes pour pack_rows
+groups <- table_loadings %>%
+  mutate(row = row_number()) %>%
+  group_by(Category) %>%
+  summarise(start = min(row), end = max(row), .groups = "drop")
+
+# Supprimer la colonne Category (remplacée par pack_rows)
+table_display <- table_loadings_kbl %>% select(-Category)
+
+# Construire le tableau
+tbl <- table_display %>%
+  kbl(
+    booktabs  = TRUE,
+    longtable = TRUE,
+    escape    = FALSE,  # important pour cell_spec
+    label     = NA,
+    caption   = "Table S1. PCoA variable loadings by category. Values represent correlations between each variable and the principal coordinate axes. Strong loadings (|r| > 0.5) are shown in red."
+  ) %>%
+  kable_styling(
+    latex_options = c("repeat_header"),
+    font_size = 10
+  ) %>%
+  row_spec(0, bold = TRUE, background = "gray!30") %>%
+  row_spec(stripe_rows, background = "gray!8") %>%
+  column_spec(1, width = "7cm") %>%   # Variable
+  column_spec(2, width = "1.5cm") %>% # ID
+  column_spec(3, width = "1.5cm") %>% # Axis 1
+  column_spec(4, width = "1.5cm") %>% # Axis 2
+  column_spec(5, width = "1.5cm") %>% # Axis 3
+  column_spec(6, width = "1.5cm")     # Axis 4
+
+# Ajouter les groupes de catégories
+for (i in 1:nrow(groups)) {
+  tbl <- tbl %>%
+    pack_rows(groups$Category[i], groups$start[i], groups$end[i],
+              bold = TRUE, background = "gray!30")
+}
+
+tbl
+
+  
+  
+cat("\\clearpage\n")  # new page after each table
+
+```
+
