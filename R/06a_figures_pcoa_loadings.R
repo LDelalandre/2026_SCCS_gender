@@ -198,3 +198,42 @@ ggsave("draft/fig/appendix_loadings_plot_full.png", ,
 ggsave("draft/fig/loadings_plot.png", loadings_plot,
        width = 8, height = 6)
 
+
+# Loading boxplot ####
+
+make_loading_boxplot <- function(axes = c("Axis.1", "Axis.2", "Axis.3",
+                                          "Axis.4", "Axis.5"),
+                                 ncol_facet = length(axes)) {
+  
+  p <- vars_plot %>%
+    filter(axis %in% axes) %>%
+    mutate(axis = factor(axis, levels = axes)) %>%
+    ggplot(aes(x = loading, y = category_Angarika, fill = category_Angarika)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.5, width = 0.6) +
+    geom_jitter(aes(alpha = significant),
+                height = 0.15, width = 0,
+                shape = 21, size = 1.6, color = "black", stroke = 0.2) +
+    geom_vline(xintercept = c(-0.30, 0.30),
+               linetype = "dotted", color = "grey40", alpha = 0.7) +
+    geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.3) +
+    scale_fill_manual(values = category_colors, name = "Domain") +
+    scale_alpha_manual(values = c("FALSE" = 0.35, "TRUE" = 1), guide = "none") +
+    scale_y_discrete(limits = rev(names(category_colors))) +
+    theme_bw(base_size = 9) +
+    theme(
+      strip.background = element_blank(),
+      strip.text       = element_text(face = "bold", size = 10),
+      legend.position   = "none",
+      panel.spacing     = unit(1, "lines")
+    ) +
+    labs(x = "Loading (corrected for coding direction)", y = NULL)
+  
+  if (length(axes) > 1) {
+    p <- p + facet_wrap(~ axis, nrow = 1)
+  }
+  p
+  # cowplot::plot_grid(standalone_legend, p, rel_widths = c(0.4, 1))
+}
+
+
+make_loading_boxplot(axes = c("Axis.1"), ncol_facet = 1)

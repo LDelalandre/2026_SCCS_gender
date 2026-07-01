@@ -39,9 +39,7 @@ table_resp <- whyte_category_angarika %>%
   Standard Cross Cultural Sample and in Whyte's original data are given in the 
   first two columns, respectively. In addition to the full name of the variables, 
   we defined a short name to ease visualization. 
-  Finally, the categorization used by Whyte and by us are given.", 
-              fp_p = fp_par(text.align = "left"),
-              fp_t = fp_text(bold = FALSE, italic = FALSE))
+  Finally, the categorization used by Whyte and by us are given.")
 
 table_resp
 
