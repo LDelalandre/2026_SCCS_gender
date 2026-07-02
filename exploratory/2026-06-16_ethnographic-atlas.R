@@ -28,9 +28,13 @@ societies_mapping_parsed <- societies_mapping %>%
   unique()
 
 
-ea_vars_of_interest <- c("EA078", "EA043", "EA011", "EA044", "EA045", "EA046", "EA047", "EA048", "EA049",
-                         # "EA006", # removed: dowry vs. bride price, did not at all on Whyte data's axis 1.
+ea_vars_of_interest <- c("EA078", "EA043", "EA011",
+                         # "EA044", "EA045", "EA046", "EA047", "EA048", "EA049",
                          "EA050", "EA051", "EA052", "EA053", "EA054"
+                         # "EA006", # removed: dowry vs. bride price, did not at all on Whyte data's axis 1.
+                         # "EAOO8", # Domestic organization 
+                         # "EA015", # Community marriage organization
+                         # "EAO17" # Largest patrilineal kin group
                          )
 variable_definitions <- variables_ea %>% 
   filter(var_id_ea %in% ea_vars_of_interest) %>% 
@@ -58,7 +62,7 @@ codes_inspection <- codes_ea %>%
 
 library(dplyr)
 
-ea_fdata_long <- ea_subset_fvar_fsoc %>%
+ea_fdata_long <- ea_subset_fvar %>%
   mutate(
     code_r = case_when(
       
@@ -114,6 +118,13 @@ ea_fdata_long <- ea_subset_fvar_fsoc %>%
       var_id_ea == "EA078" & code %in% c(4, 5) ~ 4,  # permitted (with or without pregnancy caveat)
       var_id_ea == "EA078" & code == 6 ~ 5,  # freely permitted
       
+      # # ── EA008: domestic organization ──
+      # var_id_ea == "EA078" & code == 1 ~ 1,  # precluded by early marriage
+      # var_id_ea == "EA078" & code == 2 ~ 2,  # prohibited, strongly sanctioned
+      # var_id_ea == "EA078" & code == 3 ~ 3,  # prohibited, weakly sanctioned
+      # var_id_ea == "EA078" & code %in% c(4, 5) ~ 4,  # permitted (with or without pregnancy caveat)
+      # var_id_ea == "EA078" & code == 6 ~ 5,  # freely permitted
+      
       # ── Anything else (other variables or unhandled codes) → NA ──
       TRUE ~ NA_real_
     )
@@ -121,10 +132,10 @@ ea_fdata_long <- ea_subset_fvar_fsoc %>%
 
 
 # check: see original vs recoded for each variable
-ea_fdata_long %>%
-  filter(!is.na(code_r)) %>%
-  count(var_id_ea, code, code_r) %>%
-  arrange(var_id_ea, code) %>% View
+# ea_fdata_long %>%
+#   filter(!is.na(code_r)) %>%
+#   count(var_id_ea, code, code_r) %>%
+#   arrange(var_id_ea, code) %>% View
 
 
 # Load EA variables on SCCS ####
@@ -170,31 +181,31 @@ societies_mapping_parsed %>% count(soc_id) %>% filter(n > 1)
 
 ## plot ####
 
-all_loadings <- bind_rows(
-  var_loadings %>% mutate(source = "SCCS"),
-  ea_loadings_plot
-)
-
-# -- plot
-all_loadings %>%
-  filter(pco %in% c("PCo1", "PCo2")) %>%
-  select(var_id_ea, source, pco, loading) %>%
-  pivot_wider(names_from = pco, values_from = loading) %>%
-  ggplot(aes(x = PCo1, y = PCo2,
-             color = source,
-             label = var_id_ea)) +
-  geom_segment(aes(xend = 0, yend = 0),
-               arrow     = arrow(length = unit(0.2, "cm"), ends = "first"),
-               linewidth = 0.8) +
-  geom_point(size = 2.5) +
-  ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
-  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
-  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
-  scale_color_brewer(palette = "Set2", name = "Source") +
-  theme_bw(base_size = 10) +
-  labs(x     = "PCo1 (formal domination)",
-       y     = "PCo2 (work segregation)",
-       title = "EA variables projected on SCCS PCoA axes")
+# all_loadings <- bind_rows(
+#   var_loadings %>% mutate(source = "SCCS"),
+#   ea_loadings_plot
+# )
+# 
+# # -- plot
+# all_loadings %>%
+#   filter(pco %in% c("PCo1", "PCo2")) %>%
+#   select(var_id_ea, source, pco, loading) %>%
+#   pivot_wider(names_from = pco, values_from = loading) %>%
+#   ggplot(aes(x = PCo1, y = PCo2,
+#              color = source,
+#              label = var_id_ea)) +
+#   geom_segment(aes(xend = 0, yend = 0),
+#                arrow     = arrow(length = unit(0.2, "cm"), ends = "first"),
+#                linewidth = 0.8) +
+#   geom_point(size = 2.5) +
+#   ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
+#   geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
+#   geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
+#   scale_color_brewer(palette = "Set2", name = "Source") +
+#   theme_bw(base_size = 10) +
+#   labs(x     = "PCo1 (formal domination)",
+#        y     = "PCo2 (work segregation)",
+#        title = "EA variables projected on SCCS PCoA axes")
 
 
 variable_definitions
@@ -205,6 +216,8 @@ strong_vars <- ea_loadings %>%
   pull(var_id_ea)
 strong_vars
 
+variable_definitions %>% 
+  filter(var_id_ea %in% strong_vars)
 
 # PCoA on EA data ####
 
@@ -268,8 +281,24 @@ coords_df_ea <- coords_df_ea %>%
   mutate(Ax1_ea = -Ax1_ea)  # flip sign
 
 
+### loadings ####
 
-## Plots ####
+# Align by rowname
+shared <- intersect(rownames(mat_ea), coords_df_ea$soc_id_ea)
+
+mat_aligned <- mat_ea[shared, ]
+pco_aligned <- coords_df_ea %>% 
+  filter(soc_id_ea %in% shared) %>%
+  arrange(match(soc_id_ea, shared)) %>%
+  select(Ax1_ea:Ax5_ea)
+
+loadings_ea <- cor(mat_aligned, pco_aligned, use = "pairwise.complete.obs") %>%
+  as.data.frame() %>%
+  rownames_to_column("var_id_ea") %>% 
+  left_join(variable_definitions) %>% 
+  select(var_id_ea, title, everything())
+
+### Plots ####
 
 scree_plot <- data.frame(
   axis = 1:length(pcoa_result_ea$values$Relative_eig),
@@ -288,10 +317,10 @@ scree_plot <- data.frame(
 scree_plot
 
 
-# Correlation
+## Correlation ####
 coords_df_merged <- coords_df_ea %>% 
   left_join(societies_mapping_parsed) %>% 
-  left_join(coords_df)
+  right_join(coords_df)
 
 coords_df_merged %>% 
   ggplot(aes(x = Ax1_ea, y = Ax1)) +
@@ -333,6 +362,7 @@ lm(height_ratio ~ EA011, data = ea_wide_coords_merged_height) %>% summary()
 lm(height_ratio ~ EA078, data = ea_wide_coords_merged_height) %>% summary()
 
 
+
 # Rather than PCoA anew, prediction ####
 
 # Societies in both datasets
@@ -352,3 +382,85 @@ lm(height_ratio ~ EA078 + EA053 + EA054 + EA011,
 # Predict on full EA
 coords_df_ea <- ea_wide_coords %>%
   mutate(Ax1_predicted = predict(model_ea_to_sccs, newdata = .))
+
+
+
+
+# Exploration predictors from EA ####
+fvar <- "EA031" # mean size of local communities VERY NET PATTERN
+# Linked to reproduction control?
+fvar <- "EA033" # Jurisdictional hierarchy beyond local community  VERY NET PATTERN TOO
+# And something like a U-shaped pattern
+
+fvar <- "EA034" # high gods
+fvar <- "EA039" # plow
+
+fvar <- "EA042" # type of agriculture (to be recoded)
+fvar <- "EA066" # class differentiation
+fvar <- "EA070" #slavery
+
+fvar <- "EA074" #Inheritance rule for real property (land)
+# the lowest is 4, Children, less for daughters (coherent!!), and 6, Patrilineal by heirs
+fvar <- "EA076" # inheritance for movable property: same pattern!
+
+fvar <- "EA094" # Political succession: version from Murdock (1957)
+# very consistent: 11, 12, 13: patrilineal
+# 24, 25,26: matrilineal: the highest
+
+
+fea <- ea %>% 
+  filter(var_id_ea == fvar)
+
+coords_df_ea %>% 
+  select(soc_id_ea, Ax1_ea) %>% 
+  left_join(fea) %>% 
+  ggplot(aes(x = code, y = Ax1_ea)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+coords_df_ea %>% 
+  select(soc_id_ea, Ax1_ea) %>% 
+  left_join(fea) %>% 
+  filter(!is.na(code)) %>% 
+  ggplot(aes(x = as.factor(code), y = Ax1_ea)) +
+  geom_boxplot() +
+  geom_point()
+
+coords_df_ea %>% 
+  select(soc_id_ea, Ax1_ea) %>% 
+  left_join(fea) %>% 
+  lm(code ~ Ax1_ea, data = .) %>% summary() 
+
+
+fea <- ea %>% 
+  filter(var_id_ea == "EA202") # population size
+
+coords_df_ea %>% 
+  select(soc_id_ea, Ax1_ea) %>% 
+  left_join(fea) %>% 
+  ggplot(aes(x = code, y = Ax1_ea)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(transform = "log")
+
+
+
+
+# Pairs of variables of SCCS
+
+fvar <- "EA031" # high gods
+fvar2 <- "EA033" # plow
+
+fea <- ea %>% 
+  filter(var_id_ea == fvar) %>% 
+  rename(fvar = code)
+
+fea2 <- ea %>% 
+  filter(var_id_ea == fvar2) %>% 
+  select(soc_id_ea, code) %>% 
+  rename(fvar2 = code)
+
+fea %>% 
+  inner_join(fea2) %>% 
+  ggplot(aes(x = fvar, y = fvar2)) +
+  geom_jitter()

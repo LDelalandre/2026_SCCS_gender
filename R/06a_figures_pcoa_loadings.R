@@ -181,11 +181,15 @@ make_loading_plot <- function(axes = c("Axis.1", "Axis.2", "Axis.3",
     p <- p + facet_wrap(~ axis, nrow = 1)
   }
   
-  cowplot::plot_grid(standalone_legend, p, rel_widths = c(0.4, 1))
+  # cowplot::plot_grid(standalone_legend, p, rel_widths = c(0.4, 1))
+  list(standalone_legend, p)
 }
 
 # Axis 1 only
 loadings_plot <- make_loading_plot("Axis.1")
+loadings_plot[[1]] %>% plot
+loadings_plot[[2]]
+loadings_plot_legend <- cowplot::plot_grid(loadings_plot[[1]], loadings_plot[[2]], rel_widths = c(0.4, 1))
 
 # All axes
 loadings_plot_full <- make_loading_plot()
@@ -195,8 +199,63 @@ make_loading_plot(c("Axis.1", "Axis.2"))
 
 ggsave("draft/fig/appendix_loadings_plot_full.png", ,
        width = 17, height = 6)
-ggsave("draft/fig/loadings_plot.png", loadings_plot,
+
+
+ggsave("draft/fig/loadings_plot.png", loadings_plot_legend,
        width = 8, height = 6)
+
+
+## Plus permutation results
+
+# source ~/Documents/Research/Projects/2026_SCCS_gender/R/02c_pcoa_permutation.R
+
+appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == "PCo1"), 
+                                                   aes(x = variance * 100)) +
+  geom_histogram(fill = "grey70", color = "white", bins = 40) +
+  geom_vline(data = obs_df %>% filter(axis == "PCo1"), 
+             aes(xintercept = observed), color = "red", linewidth = 0.8) +
+  # facet_wrap(~ axis, scales = "free_x") +
+  labs(x        = "Variance explained \n by Axis 1(%)",
+       y        = "Count") +
+  theme_classic(base_size = 11)
+
+
+appendix_pcoa_mean_loading_axis1 <- ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
+  geom_histogram(fill = "grey70", color = "white", bins = 40) +
+  geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
+  labs(x        = "Mean variable loading \n on Axis 1",
+       y        = "Count"
+       # title    = "Is the positive shift in PCo1 loadings beyond chance?",
+       # subtitle = paste0("Observed mean = ", round(obs_mean_loading, 3),
+       #                   " — permutation p = ", round(p_mean, 3))
+  ) +
+  theme_classic(base_size = 11)
+
+A <- loadings_plot[[2]] +
+  ggtitle("A.")
+
+B <- appendix_pcoa_permutation_variance_axis1 +
+  ggtitle("B.") 
+  # theme(plot.title = element_text(size = 30)) # , face = "bold"
+C <- appendix_pcoa_mean_loading_axis1 +
+  ggtitle("C.")
+
+legend <- loadings_plot[[1]]
+legend_wrapped <- wrap_elements(full = legend)
+
+layout <- "
+AB
+AC
+AD
+"
+plot_loadings_permutation <- A + B + C  + legend_wrapped +
+  plot_layout(design = layout, 
+              widths = c(1,0.4), 
+              heights = c(0.1,0.1, 0.2))
+plot_loadings_permutation
+
+ggsave("draft/fig/plot_loadings_permutation.png", plot_loadings_permutation,
+       width = 22, height = 18, units = "cm")
 
 
 # Loading boxplot ####

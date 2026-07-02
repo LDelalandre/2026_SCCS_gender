@@ -86,6 +86,8 @@ appendix_pcoa_permutation_variance <- ggplot(perm_long, aes(x = variance * 100))
 
 ggsave("draft/fig/appendix_pcoa_permutation_variance.png", appendix_pcoa_permutation_variance)
 
+
+
 # 3. Variable loadings on PCo1 ####
 
 obs_site_scores  <- pcoa_result$vectors[, 1] # HERE CHANGE IF I WANT TO SEE OTHER AXES
@@ -128,15 +130,7 @@ p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
 
-appendix_pcoa_mean_loading_axis1 <- ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
-  geom_histogram(fill = "grey70", color = "white", bins = 40) +
-  geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
-  labs(x        = "Mean loading across all variables on PCo1",
-       y        = "Count",
-       title    = "Is the positive shift in PCo1 loadings beyond chance?",
-       subtitle = paste0("Observed mean = ", round(obs_mean_loading, 3),
-                         " — permutation p = ", round(p_mean, 3))) +
-  theme_minimal(base_size = 11)
+
 
 ggsave("draft/fig/appendix_pcoa_mean_loading_axis1.png", appendix_pcoa_mean_loading_axis1)
 
