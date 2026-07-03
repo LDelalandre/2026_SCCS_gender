@@ -113,15 +113,15 @@ map_societies <- ggplot() +
   # Add society points
   geom_point(
     data = coords_df,
-    aes(x = origLong, y = origLat), #, color = region
-    size = 1,
+    aes(x = origLong, y = origLat, , color = region6), #
+    size = 0.8,
     alpha = 0.8
   ) +
   # Add society labels
   geom_text(
     data = coords_df,
     aes(x = origLong, y = origLat, label = pref_name_for_society), #, color = region
-    size = 2.2,
+    size = 2,
     vjust = -0.8,
     hjust = 0.5,
     check_overlap = TRUE
@@ -133,7 +133,7 @@ map_societies <- ggplot() +
   theme(
     panel.background = element_rect(fill = "aliceblue", color = NA),
     panel.grid = element_line(color = "white", linewidth = 0.3),
-    # legend.position = "bottom",
+    legend.position = "bottom",
     # legend.title = element_text(face = "bold"),
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
   ) +
@@ -146,7 +146,7 @@ map_societies <- ggplot() +
 
 map_societies
 
-ggsave("output/map-societies.png", map_societies)
+ggsave("draft/fig/map-societies.png", map_societies, width = 18, height = 14, units = "cm")
 
 
 

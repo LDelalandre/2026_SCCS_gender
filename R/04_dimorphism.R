@@ -103,19 +103,36 @@ coords_extended %>%
   filter(!is.na(height_ratio)) %>% 
   dim()
 # Are societies with height ratio data representative of the full PCoA space?
-has_size <- !is.na(coords_extended$height_ratio)
-plot(pcoa_result$vectors[, 1], pcoa_result$vectors[, 2],
-     col = ifelse(has_size, "steelblue", "grey80"), pch = 19,
-     xlab = "PCo1", ylab = "PCo2")
-legend("topright", c("has size data", "missing"), 
-       col = c("steelblue", "grey80"), pch = 19)
 
+plot_df <- data.frame(
+  PCo1 = pcoa_result$vectors[, 1],
+  PCo2 = pcoa_result$vectors[, 2],
+  has_size = ifelse(!is.na(coords_extended$height_ratio), "has size data", "missing")
+)
+
+pcoa_dimorphism <- ggplot(plot_df, aes(x = PCo1, y = PCo2, color = has_size)) +
+  geom_point(size = 1) +
+  scale_color_manual(values = c("has size data" = "steelblue", "missing" = "grey80")) +
+  labs(x = "PCo1", y = "PCo2", color = NULL) +
+  theme_classic(base_size = 11) +
+  theme(legend.position = "top")
+
+ggsave("draft/fig/pcoa_dimorphism.png", pcoa_dimorphism, height = 8, width = 8, units = "cm")
 
 coords_extended %>% 
   ggplot(aes(x = Ax1, y = height_ratio)) +
   geom_point() +
   theme_classic() +
   ggtitle("All the regions grouped")
+
+pcoa_dimorphism_region <- coords_extended %>% 
+  ggplot(aes(x = Ax1, y = height_ratio)) +
+  geom_point() +
+  theme_classic() +
+  # ggtitle("All the regions grouped") +
+  facet_wrap(~ region6)
+
+ggsave("draft/fig/pcoa_dimorphism_region.png", pcoa_dimorphism_region, height = 15, width = 15, units = "cm")
 
 coords_extended %>% 
   ggplot(aes(x = Ax1, y = male_stature)) +
@@ -141,7 +158,7 @@ run_model <- F
 
 if (run_model == T){
   mod_domination_size <- brm(
-    height_ratio ~ Ax1 + (1|region), # + (1|language_family) # not enough data points to do so
+    height_ratio ~ Ax1 + (1|region6), # + (1|language_family) # not enough data points to do so
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
               prior(normal(0, 0.5), class = Intercept),
@@ -149,7 +166,7 @@ if (run_model == T){
               prior(exponential(1), class = sigma)),
     data = coords_extended,
     cores = 4, iter = 4000, seed = 42,
-    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
+    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among region6s is not substantive, - or I don't have enough measurements per region6 - and this caused some problems.
   )
   saveRDS(mod_domination_size, here::here("output/2026-03-19_whyte_mod_domination_size.rds"))
 }
@@ -165,7 +182,7 @@ n <- nrow(drop_na(coords_extended, Ax1, height_ratio))
 label_text <- paste0(
   "R² = ", round(r2[1, "Estimate"], 2),
   " [", round(r2[1, "Q2.5"], 2), ", ", round(r2[1, "Q97.5"], 2), "]\n",
-  "β = ", round(beta["Estimate"], 2),
+  "β = ", round(beta["Estimate"], 3),
   " [", round(beta["Q2.5"], 2), ", ", round(beta["Q97.5"], 2), "]\n",
   "n = ", n
 )
@@ -192,13 +209,13 @@ coords_extended %>%
   ggplot(aes(x = Ax1, y = height_ratio)) +
   geom_point() +
   theme_classic() +
-  facet_wrap(~region)
+  facet_wrap(~region6)
 
 
 # Model complexity size ####
 
 # TODO: compute complexity for all of Gleeson's data points!!
-# TODO: add control on region?
+# TODO: add control on region6?
 
 pred_resp_dimorphism <- coords_extended %>% 
   left_join(pred_resp, by = "soc_id") %>% 
@@ -214,7 +231,7 @@ run_model <- F
 
 if (run_model == T){
   mod_complexity_size <- brm(
-    height_ratio ~ complexity + (1|region),
+    height_ratio ~ complexity + (1|region6),
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
               prior(normal(0, 0.5), class = Intercept),
@@ -222,7 +239,7 @@ if (run_model == T){
               prior(exponential(1), class = sigma)),
     data = pred_resp_dimorphism %>% arrange(complexity),
     cores = 4, iter = 4000, seed = 42,
-    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among regions is not substantive, - or I don't have enough measurements per region - and this caused some problems.
+    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among region6s is not substantive, - or I don't have enough measurements per region6 - and this caused some problems.
   )
   saveRDS(mod_complexity_size, here::here("output/2026-03-19_whyte_mod_complexity_size.rds"))
 }
@@ -259,7 +276,7 @@ pp_check(mod_complexity_size, type = "scatter_avg")
 
 
 
-# mod_no_region <- brm(
+# mod_no_region6 <- brm(
 #   height_ratio ~ complexity,
 #   family = gaussian(),
 #   prior = c(prior(normal(0, 0.5), class = b),
@@ -269,11 +286,11 @@ pp_check(mod_complexity_size, type = "scatter_avg")
 #   cores = 4, iter = 4000, seed = 42
 # )
 # 
-# loo_region    <- loo(mod_complexity_size)
-# loo_no_region <- loo(mod_no_region)
+# loo_region6    <- loo(mod_complexity_size)
+# loo_no_region6 <- loo(mod_no_region6)
 # 
-# loo_compare(loo_region, loo_no_region)
-# The LOO favors mod_no_region marginally, but the difference (−1.0 ± 0.8) is well within 1 SE — so the models are indistinguishable predictively.
+# loo_compare(loo_region6, loo_no_region6)
+# The LOO favors mod_no_region6 marginally, but the difference (−1.0 ± 0.8) is well within 1 SE — so the models are indistinguishable predictively.
 
 
 
@@ -288,7 +305,7 @@ run_model <- F
 
 if (run_model == T){
   mod_mediation <- brm(
-    bf(height_ratio ~ Ax1 + complexity + (1 | region)) +
+    bf(height_ratio ~ Ax1 + complexity + (1 | region6)) +
       bf(Ax1 ~ complexity + herding_importance + mo(matri_cat) + hunting) +
       set_rescor(FALSE),
     family = gaussian(),

@@ -11,35 +11,82 @@ whyte_category_angarika %>%
 library(flextable)
 library(officer)
 
+variable_coverage <- read_csv("output/02a_variable_coverage.csv") %>% 
+  mutate(coverage = round(coverage, digits = 2))
+
+direction_table_clean <- read.csv("data/gender_response_variables_recode.csv") %>% 
+  select(var_id, women_favorable) %>% 
+  transmute(var_id = var_id,
+            recoded = if_else(women_favorable == -1, "Yes", "No"))
+  
+codes_max_values <- codes %>% 
+  filter(var_id %in% whyte_category_angarika$var_id) %>% 
+  group_by(var_id) %>% 
+  mutate(min_value = min(code, na.rm = T),
+        max_value = max(code, na.rm = T)) %>% 
+  filter(code == max_value | code == min_value) %>% 
+  filter(code == max_value) %>% 
+  select(var_id, name, max_value)
+
+
 table_resp <- whyte_category_angarika %>%
   filter(!is.na(category_whyte)) %>%
   filter(!is.na(var_id)) %>%
+  left_join(codes_max_values) %>% 
+  left_join(direction_table_clean) %>% 
+  left_join(variable_coverage) %>% 
+  mutate(category_Angarika = factor(category_Angarika, levels = names(category_colors))) %>%
+  arrange(category_Angarika, title_shortened) %>% 
+  arrange(category_Angarika, title_shortened) %>% 
+  select(var_id, var_id_whyte, title_shortened, title, name, max_value, 
+         category_Angarika, category_whyte, everything()) %>% 
   flextable() %>%
   set_header_labels(
-    var_id = "SCCS ID",
-    code = "Code", 
-    full_name = "Full name",
-    short_name = "Short name",
-    category_whyte = "Whyte domain",
-    our_category = "Our category"
+    var_id = "ID_SCCS",
+    var_id_whyte = "ID_Whyte", 
+    title_shortened = "Short name",
+    title = "Full name",
+    max_value = "Highest value",
+    name = "Description of the highest value",
+    category_whyte = "Whyte's category",
+    category_Angarika = "Our category",
+    recoded = "Coding direction changed",
+    coverage = "Coverage"
   ) %>%
   fontsize(size = 7) %>%
   fontsize(size = 8, part = "header") %>% 
   width(j = 1, width = 1.7, "cm") %>%
-  width(j = 2, width = 1.7, "cm") %>%
-  width(j = 3, width = 5, "cm") %>%
+  width(j = 2, width = 1.3, "cm") %>%
+  width(j = 3, width = 2, "cm") %>%
   width(j = 4, width = 3, "cm") %>%
-  width(j = 5, width = 1.5, "cm") %>%
-  width(j = 6, width = 3, "cm") %>%
+  
+  width(j = 5, width = 2, "cm") %>%
+  width(j = 6, width = 1, "cm") %>%
+  
+  width(j = 7, width = 2, "cm") %>%
+  width(j = 8, width = 1.5, "cm") %>%
+  
+  width(j = 9, width = 1, "cm") %>%
+  width(j = 10, width = 1, "cm") %>%
   padding(padding = 2, part = "all") %>%
   # theme_vanilla()
   theme_zebra %>% 
-  set_caption("Table S1: the 52 variables approximating the status of women in 
-  preindustrial societies measured by Whyte. The variable ID used in the 
-  Standard Cross Cultural Sample and in Whyte's original data are given in the 
-  first two columns, respectively. In addition to the full name of the variables, 
-  we defined a short name to ease visualization. 
-  Finally, the categorization used by Whyte and by us are given.")
+  set_caption("Table S1: Women's status variables, ordered as in Figure 1. 
+  The variables are identified using the 
+  Standard Cross-Cultural Sample's scheme (ID_SCCS), and Whyte's original coding (ID_Whyte).
+  Variable short name was coined for the present paper, whereas the full name is provided in D-PLACE. 
+  Note that the full name is sometimes 
+  unprecise regarding the direction of variable coding. 
+  Variables were integers. We provide a description of the highest value of the variables
+  (as given in D-PLACE), as well as that value.
+  Most of the time, the variables
+  were coded such as high values indicated higher status of women; when it was not the case,
+  we recoded the variables in 
+  the opposite direction. This is indicated it in the column `coding direction
+  changed`. 
+  Finally, variable coverage provides the proportion of societies for which the variable was measured.
+  All variables are retrieable from D-PLACE
+  (https://d-place.org/contributions/SCCS), using ID_SCCS.")
 
 table_resp
 

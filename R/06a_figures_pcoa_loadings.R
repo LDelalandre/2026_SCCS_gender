@@ -3,13 +3,15 @@
 
 pcoa_result <-  readRDS(here::here("output/pcoa_result"))
 
+perm_long <- read.csv("output/02c_perm_long.csv")
 
+df_perm_mean_loadings <- read.csv("output/02C_df_perm_mean_loadings.csv")
 
 
 ## Correct direction: positive = good for women ####
 
-direction_table <- read.csv("data/gender_response_variables_recode.csv") %>%
-  select(var_id, title, women_favorable)
+# direction_table <- read.csv("data/gender_response_variables_recode.csv") %>%
+#   select(var_id, title, women_favorable)
 
 # Correlate original variables with society PCoA scores
 var_loadings <- cor(
@@ -24,11 +26,11 @@ var_loadings <- cor(
 
 
 # Change the sign of the loading if it was coded as high = bad for women
-var_loadings_corrected <- var_loadings %>%
-  left_join(direction_table, by = "var_id") %>%
-  mutate(across(starts_with("Axis."), ~ . * women_favorable))
+# var_loadings_corrected <- var_loadings %>%
+#   left_join(direction_table, by = "var_id") %>%
+#   mutate(across(starts_with("Axis."), ~ . * women_favorable))
 
-var_order <- var_loadings_corrected %>%
+var_order <- var_loadings %>%
   left_join(whyte_vars %>% select(var_id_whyte, category2),
             by = "var_id_whyte") %>%
   arrange(desc(category), category2, title_shortened) %>%
@@ -193,21 +195,20 @@ loadings_plot_legend <- cowplot::plot_grid(loadings_plot[[1]], loadings_plot[[2]
 
 # All axes
 loadings_plot_full <- make_loading_plot()
+cowplot::plot_grid(loadings_plot_full[[1]], loadings_plot_full[[2]], rel_widths = c(0.4, 1))
 
 # Custom subset
 make_loading_plot(c("Axis.1", "Axis.2"))
 
-ggsave("draft/fig/appendix_loadings_plot_full.png", ,
-       width = 17, height = 6)
+ggsave("draft/fig/loadings_plot_full.png", loadings_plot_full,
+       width = 17, height = 13, units = "cm")
 
 
 ggsave("draft/fig/loadings_plot.png", loadings_plot_legend,
        width = 8, height = 6)
 
 
-## Plus permutation results
-
-# source ~/Documents/Research/Projects/2026_SCCS_gender/R/02c_pcoa_permutation.R
+## Plus permutation results ####
 
 appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == "PCo1"), 
                                                    aes(x = variance * 100)) +
@@ -220,7 +221,7 @@ appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == 
   theme_classic(base_size = 11)
 
 
-appendix_pcoa_mean_loading_axis1 <- ggplot(data.frame(x = perm_mean_loadings), aes(x = x)) +
+appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = x)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
   geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
   labs(x        = "Mean variable loading \n on Axis 1",
@@ -254,8 +255,10 @@ plot_loadings_permutation <- A + B + C  + legend_wrapped +
               heights = c(0.1,0.1, 0.2))
 plot_loadings_permutation
 
-ggsave("draft/fig/plot_loadings_permutation.png", plot_loadings_permutation,
-       width = 22, height = 18, units = "cm")
+ggsave("draft/fig/plot_loadings_permutation.png",
+       plot_loadings_permutation,
+       width = 18, height = 14, units = "cm",   # match journal spec exactly
+       dpi = 300)
 
 
 # Loading boxplot ####

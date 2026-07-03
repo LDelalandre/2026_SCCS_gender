@@ -1,7 +1,7 @@
 library("tidyverse")
 
 # Variables ####
-sccs <- read.csv(here::here("data/SCCS/data.csv"))
+sccs_raw <- read.csv(here::here("data/SCCS/data.csv"))
 
 societies <- read.csv(here::here("data/SCCS/societies.csv")) %>% 
   rename(soc_id = id)
@@ -11,7 +11,7 @@ societies_mapping <- read.csv(here::here("data/SCCS/societies_mapping.csv")) %>%
 variables <- read.csv(here::here("data/SCCS/variables.csv")) %>% 
   rename(var_id = id)
 
-codes <- read.csv(here::here("data/SCCS/codes.csv")) %>% 
+codes_raw <- read.csv(here::here("data/SCCS/codes.csv")) %>% 
   left_join(variables %>% select(var_id, title))
 
 gleeson <- read.csv(here::here("data/gleesonFemaleStatusFood2018.csv")) %>%  # height data

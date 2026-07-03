@@ -69,6 +69,8 @@ perm_long <- as.data.frame(perm_variance) %>%
   pivot_longer(everything(), names_to = "axis", values_to = "variance") %>%
   mutate(axis = factor(axis, levels = paste0("PCo", 1:10)))
 
+write.csv(perm_long, "output/02c_perm_long.csv", row.names=F)
+
 obs_df <- data.frame(
   axis     = factor(paste0("PCo", 1:10), levels = paste0("PCo", 1:10)),
   observed = obs_variance[1:10] * 100
@@ -130,9 +132,8 @@ p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
 
-
-
-ggsave("draft/fig/appendix_pcoa_mean_loading_axis1.png", appendix_pcoa_mean_loading_axis1)
+df_perm_mean_loadings <- data.frame(x = perm_mean_loadings)
+write.csv(df_perm_mean_loadings, "output/02C_df_perm_mean_loadings.csv")
 
 ## 4b. Number of variables with positive loading ####
 obs_n_positive  <- sum(obs_loadings_ax1 > 0, na.rm = TRUE)
@@ -157,6 +158,13 @@ p_values_loadings <- sapply(colnames(mat_ord_fixed), function(v) {
     mean(null <= obs)   # one-sided: how often does null go as negative?
   }
 })
+
+whyte_vars_signif_loading <- p_values_loadings %>% 
+  as.data.frame() %>% 
+  rename(p_value = ".") %>% 
+  rownames_to_column("var_id_whyte") %>% 
+  arrange(p_value) %>% 
+  left_join(whyte_vars)
 
 signif_vars <- p_values_loadings[p_values_loadings < 0.05] %>% names()
 p_values_loadings[p_values_loadings < 0.05/51]

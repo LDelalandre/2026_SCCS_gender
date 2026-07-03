@@ -33,16 +33,54 @@ whyte_category <- whyte_vars %>%
   left_join(whyte_category_angarika)
 
 
-whyte_codes <- get_codes(whyte_vars$title)
+whyte_codes <- variables %>% 
+  filter(title %in% whyte_vars$title) %>% 
+  select(var_id, category) %>% 
+  merge(codes_raw %>% 
+          filter(var_id %in% whyte_vars$var_id), 
+        by = "var_id")
+
+## Recode six variables ####
+
+# For these five variables, I reverse the coding order, i.e., if variables
+# is coded from 1 to 3, 1 becomes 3, 2 becomes 2, and 3 becomes 1.
+
+vars_to_recode <- read.csv("data/gender_response_variables_recode.csv") %>%
+  select(var_id, title, women_favorable) %>% 
+  filter(women_favorable == -1)
+
+whyte_codes_corrected <- whyte_codes %>% 
+  filter(var_id %in% vars_to_recode$var_id) %>% 
+  mutate(max_value = max(code, na.rm = T)) %>% 
+  mutate(code = max_value + 1 - code) %>% 
+  select(-max_value) %>% 
+  select(-category)
+
+codes <- codes_raw %>% 
+  filter(!var_id %in% vars_to_recode$var_id) %>% 
+  rbind(whyte_codes_corrected)
+
+sccs_recoded_vars <- sccs_raw %>% 
+  filter(var_id %in% vars_to_recode$var_id) %>% 
+  group_by (var_id) %>% 
+  mutate(max_value = max(code, na.rm = T)) %>% 
+  mutate(code = max_value + 1 - code) %>% 
+  select(-max_value)
+  
+sccs <- sccs_raw %>% 
+  filter(!var_id %in% vars_to_recode$var_id) %>% 
+  rbind(sccs_recoded_vars)
+
 
 ## Build a matrix ####
-
-whyte_data_wide <- sccs %>% 
+whyte_data <- sccs %>% 
   filter(var_id %in% whyte_vars$var_id) %>% 
   # If multiple sub_cases per society/variable, take one (e.g. most recent)
   group_by(soc_id, var_id) %>%
   slice_max(year, na_rm = TRUE, n = 1) %>%
-  ungroup() %>%
+  ungroup()
+
+whyte_data_wide <- whyte_data %>%
   dplyr::select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code) %>% 
   filter(!if_all(-soc_id, is.na))
@@ -72,7 +110,14 @@ colnames(mat_filtered) <- label_vars(colnames(mat_filtered))
 societies_removed <- mat[row_miss > 0.30, ] %>% rownames()
 
 
-variable_coverage <- colMeans(!is.na(mat))
+variable_coverage <- colMeans(!is.na(mat)) 
+
+variable_coverage %>% 
+  as.data.frame() %>% 
+  rownames_to_column("var_id") %>% 
+  rename(coverage = ".") %>% 
+  write_csv("output/02a_variable_coverage.csv")
+
 data.frame(
   min    = min(variable_coverage),
   q1     = quantile(variable_coverage, 0.25),
