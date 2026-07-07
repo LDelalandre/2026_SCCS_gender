@@ -4,7 +4,7 @@ source(here::here("R/01_import.R"))
 source(here::here("R/02a_pcoa_data_prep.R"))
 source(here::here("R/02b_pcoa_core.R"))
 source(here::here("R/02c_pcoa_permutation.R"))
-# source(here::here("R/02d_pcoa_robustness.R"))
+source(here::here("R/02d_pcoa_robustness.R"))
 
 source(here::here("R/03a_predictors_data_prep.R"))
 source(here::here("R/03b_predictors_pcoa.R"))

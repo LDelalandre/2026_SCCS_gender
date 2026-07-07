@@ -105,7 +105,7 @@ data.frame(
 # Remove rows with > 30% missing (=7 rows)
 row_miss <- rowMeans(is.na(mat))
 mat_filtered <- mat[row_miss <= 0.30, ]
-colnames(mat_filtered) <- label_vars(colnames(mat_filtered))
+# colnames(mat_filtered) <- label_vars(colnames(mat_filtered))
 
 societies_removed <- mat[row_miss > 0.30, ] %>% rownames()
 

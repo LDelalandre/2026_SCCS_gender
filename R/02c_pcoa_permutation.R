@@ -162,7 +162,7 @@ p_values_loadings <- sapply(colnames(mat_ord_fixed), function(v) {
 whyte_vars_signif_loading <- p_values_loadings %>% 
   as.data.frame() %>% 
   rename(p_value = ".") %>% 
-  rownames_to_column("var_id_whyte") %>% 
+  rownames_to_column("var_id") %>% 
   arrange(p_value) %>% 
   left_join(whyte_vars)
 
@@ -174,6 +174,6 @@ p_adjusted <- p.adjust(p_values_loadings, method = "BH")
 signif_vars_adjusted <- p_adjusted[p_adjusted < 0.05] %>% names()
 
 whyte_vars %>% 
-  filter(var_id_whyte %in% signif_vars) %>% pull(title)
+  filter(var_id %in% signif_vars) %>% pull(title)
 whyte_vars %>% 
-  filter(var_id_whyte %in% signif_vars_adjusted) %>% pull(title)
+  filter(var_id %in% signif_vars_adjusted) %>% pull(title)

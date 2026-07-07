@@ -1,6 +1,16 @@
 source("R/01_import.R")
 library(flextable)
 
+category_colors <- c(
+  "Gender Ideology"       = "#66C2A5",
+  "Gendered violence"     = "#FC8D62",
+  "Politics"              = "#8DA0CB",
+  "Family & Household"    = "#E78AC3",
+  "Subsistence & Economy" = "#A6D854",
+  "Sex & Marriage"        = "#FFD92F",
+  "Religion & Rituals"    = "#E5C494"
+)
+
 # Table response variables ####
 
 whyte_category_angarika %>%
@@ -105,7 +115,7 @@ coord_societies <- coords_df %>%
   left_join(society_profile, by = "soc_id") %>%
   # left_join(context_wide, by = "soc_id") %>% 
   arrange(Ax1) %>% 
-  select(pref_name_for_society, soc_id, Ax1, main_focal_year, region, origLat, origLong,
+  select(pref_name_for_society, soc_id, Ax1, main_focal_year, region6, origLat, origLong,
          HRAF_name_ID, HRAF_link) %>% 
   mutate(Ax1 = round(Ax1, digits = 3))%>%
   mutate(HRAF_link = utils::URLencode(HRAF_link, repeated = TRUE)) # for URLs
