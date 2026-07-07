@@ -177,3 +177,15 @@ whyte_vars %>%
   filter(var_id %in% signif_vars) %>% pull(title)
 whyte_vars %>% 
   filter(var_id %in% signif_vars_adjusted) %>% pull(title)
+
+p_values_loadings_sorted <- p_values_loadings %>% 
+  sort()
+nvar_significant <- p_values_loadings_sorted[1:12] %>%  # 12 to cross the 90% threshold
+  names()
+
+
+
+whyte_category_angarika %>% 
+  filter(var_id %in% nvar) %>% 
+  select(var_id, title, category_Angarika) %>% 
+  arrange(category_Angarika)

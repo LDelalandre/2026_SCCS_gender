@@ -345,3 +345,19 @@ post$total <- post$indirect + post$direct
 # summarise: Bayesian credible interval (CI) table
 posterior::summarise_draws(post[, c("indirect", "direct", "total")],
                            mean, sd, ~quantile(.x, probs = c(0.025, 0.975)))
+
+
+# Stability of the prediction ####
+
+
+n_reps <- 999
+r2_selected <- <fit model: dimorphism ~ axis1_scores_from_4vars>  # your observed R² or correlation
+  
+  r2_random <- numeric(n_reps)
+for (i in 1:n_reps) {
+  rand_vars <- sample(colnames(mat_ord_fixed), size = 8, replace = FALSE)
+  # build PCoA axis 1 from rand_vars, regress dimorphism on it
+  r2_random[i] <- <R² for this random set>
+}
+
+mean(r2_random >= r2_selected, na.rm = TRUE)  # empirical p-value

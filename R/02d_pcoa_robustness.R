@@ -95,8 +95,8 @@ variable_stability$axis_stability
 
 
 # 2. Stability by number of variables ####
-props <- c(0.025, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
-n_boot <- 200
+props <- c(0.025, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1)
+n_boot <- 500
 
 stability_by_prop <- map_dfr(seq_along(props), function(pi) {
   prop   <- props[pi]
@@ -138,66 +138,148 @@ stability_by_prop <- map_dfr(seq_along(props), function(pi) {
 
 
 
-# Most important variables ####
-# signif_vars and signif_vars_adjusted are imported from `02c_pcoa_permutation.R`
+# Figure most important variables ####
 
-compare_pcoa_specific_variables <- function(fmat){
-  # Pairs of rows must also have at least a non-na value for the same variable!
-  mat_iter <- fmat  # start from the original 4-variable matrix
+# Order variables by p-value (most significant first)
+var_order <- names(sort(p_values_loadings))
+
+n_vars_total <- length(var_order)
+cumulative_r <- numeric(n_vars_total)
+n_dropped    <- numeric(n_vars_total)  # track societies lost to missingness at each step
+
+for (k in seq_len(n_vars_total)) {
   
+  vars_k   <- var_order[1:k]
+  mat_k    <- mat_ord_fixed[, vars_k, drop = FALSE]
+  
+  # handle missingness the same way as before: drop rows causing non-finite distances
+  mat_iter <- mat_k
   repeat {
-    gd_test <- daisy(mat_iter, metric = "gower", type = list(ordratio = 1:ncol(mat_iter)))
+    if (ncol(mat_iter) < 1 || nrow(mat_iter) < 3) break
+    gd_test <- tryCatch(
+      daisy(mat_iter, metric = "gower", type = list(ordratio = 1:ncol(mat_iter))),
+      error = function(e) NULL)
+    if (is.null(gd_test)) break
     dm <- as.matrix(gd_test)
     if (all(is.finite(dm))) break
     
     bad <- which(!is.finite(dm), arr.ind = TRUE)
-    bad <- bad[bad[,1] < bad[,2], ]
+    bad <- bad[bad[,1] < bad[,2], , drop = FALSE]
+    if (nrow(bad) == 0) break
     
     offender_counts <- table(c(bad[,1], bad[,2]))
     worst_row <- as.integer(names(which.max(offender_counts)))
-    
-    mat_iter <- mat_iter[-worst_row, , drop = FALSE]
+    mat_iter  <- mat_iter[-worst_row, , drop = FALSE]
   }
   
-  fmat_clean <- mat_iter
-  nrow(fmat_clean)         # how many societies survive
-  nrow(fmat) - nrow(fmat_clean)  # how many were dropped
+  n_dropped[k] <- nrow(mat_k) - nrow(mat_iter)
   
-  ref_coords_clean <- ref_coords[rownames(fmat_clean), , drop = FALSE]
-  compare_pcoa_to_ref(fmat_clean, ref_coords_clean, n_axes = 1)
-}
-
-fmat_14 <- mat_ord_fixed[,signif_vars]
-r2_14_vars <- compare_pcoa_specific_variables(fmat_14)
-correlation_14 <- r2_14_vars$axis_r
-
-fmat_4 <- mat_ord_fixed[,signif_vars_adjusted]
-r2_4_vars <- compare_pcoa_specific_variables(fmat_4)
-correlation_4 <- r2_4_vars$axis_r
-
-
-set.seed(42)
-
-get_pval_comparison_pcoa_specific_variables <- function(fmat, correlation, n_rep = 999){
-  random_axis_r <- numeric(n_reps)
-  for (i in 1:n_reps) {
-    rand_vars <- sample(colnames(mat_ord_fixed), size = ncol(fmat), replace = FALSE)
-    mat_rand  <- mat_ord_fixed[, rand_vars, drop = FALSE]
-    # apply same missingness-cleaning logic as fmat_clean2 here
-    res <- compare_pcoa_to_ref(mat_rand, ref_coords, n_axes = 1)
-    random_axis_r[i] <- res$axis_r
+  if (nrow(mat_iter) < 3) {
+    cumulative_r[k] <- NA
+    next
   }
-  # which(is.na(random_axis_r)) %>% length()
-  mean(random_axis_r >= correlation, na.rm = TRUE)  # empirical p-value for the observed correlation
+  
+  ref_sub <- ref_coords[rownames(mat_iter), 1, drop = FALSE]
+  res <- compare_pcoa_to_ref(mat_iter, ref_sub, n_axes = 1)
+  cumulative_r[k] <- res$axis_r
 }
 
-pval_14 <- get_pval_comparison_pcoa_specific_variables(fmat = mat_ord_fixed[,signif_vars], 
-                                                       correlation = correlation_14)
+cumulative_df <- data.frame(
+  n_vars   = seq_len(n_vars_total),
+  axis_r   = cumulative_r,
+  n_dropped = n_dropped
+)
 
-pval_4 <- get_pval_comparison_pcoa_specific_variables(fmat = mat_ord_fixed[,signif_vars_adjusted], 
-                                                      correlation = correlation_4)
+cumulative_df$n_dropped
 
-# Figure ####
+cumulative_df$sample_note <- ifelse(cumulative_df$n_dropped > 0, "reduced sample", "full sample")
+
+appendix_pcoa_cumulative_axis1 <- ggplot() +
+  geom_ribbon(data = stability_by_prop, aes(x = n_vars, ymin = ci_low, ymax = ci_high),
+              fill = "grey80") +
+  geom_line(data = stability_by_prop, aes(x = n_vars, y = mean_r),
+            color = "steelblue", linewidth = 0.8) +
+  geom_point(data = stability_by_prop, aes(x = n_vars, y = mean_r),
+             color = "steelblue", size = 2) +
+  geom_hline(yintercept = 0.9, linetype = "dashed", color = "grey40") +
+  geom_line(data = cumulative_df, aes(x = n_vars, y = axis_r),
+            color = "firebrick", linewidth = 0.9) +
+  geom_point(data = cumulative_df, aes(x = n_vars, y = axis_r, shape = sample_note),
+             color = "firebrick", size = 2) +
+  scale_shape_manual(values = c("full sample" = 16, "reduced sample" = 1)) +
+  labs(x        = "Number of variables",
+       y        = "Axis 1 stability (Spearman r with full ordination)",
+       shape    = NULL) +
+  theme_minimal(base_size = 11) +
+  theme_classic() +
+  theme(legend.position = "none") 
+
+appendix_pcoa_cumulative_axis1
+
+ggsave("draft/fig/appendix_pcoa_stability_axis1.png", appendix_pcoa_cumulative_axis1)
+
+
+
+# # Most important variables
+# # signif_vars and signif_vars_adjusted are imported from `02c_pcoa_permutation.R`
+# 
+# compare_pcoa_specific_variables <- function(fmat){
+#   # Pairs of rows must also have at least a non-na value for the same variable!
+#   mat_iter <- fmat  # start from the original 4-variable matrix
+#   
+#   repeat {
+#     gd_test <- daisy(mat_iter, metric = "gower", type = list(ordratio = 1:ncol(mat_iter)))
+#     dm <- as.matrix(gd_test)
+#     if (all(is.finite(dm))) break
+#     
+#     bad <- which(!is.finite(dm), arr.ind = TRUE)
+#     bad <- bad[bad[,1] < bad[,2], ]
+#     
+#     offender_counts <- table(c(bad[,1], bad[,2]))
+#     worst_row <- as.integer(names(which.max(offender_counts)))
+#     
+#     mat_iter <- mat_iter[-worst_row, , drop = FALSE]
+#   }
+#   
+#   fmat_clean <- mat_iter
+#   nrow(fmat_clean)         # how many societies survive
+#   nrow(fmat) - nrow(fmat_clean)  # how many were dropped
+#   
+#   ref_coords_clean <- ref_coords[rownames(fmat_clean), , drop = FALSE]
+#   compare_pcoa_to_ref(fmat_clean, ref_coords_clean, n_axes = 1)
+# }
+# 
+# fmat_14 <- mat_ord_fixed[,signif_vars]
+# r2_14_vars <- compare_pcoa_specific_variables(fmat_14)
+# correlation_14 <- r2_14_vars$axis_r
+# 
+# fmat_4 <- mat_ord_fixed[,signif_vars_adjusted]
+# r2_4_vars <- compare_pcoa_specific_variables(fmat_4)
+# correlation_4 <- r2_4_vars$axis_r
+# 
+# 
+# set.seed(42)
+# 
+# get_pval_comparison_pcoa_specific_variables <- function(fmat, correlation, n_rep = 999){
+#   random_axis_r <- numeric(n_reps)
+#   for (i in 1:n_reps) {
+#     rand_vars <- sample(colnames(mat_ord_fixed), size = ncol(fmat), replace = FALSE)
+#     mat_rand  <- mat_ord_fixed[, rand_vars, drop = FALSE]
+#     # apply same missingness-cleaning logic as fmat_clean2 here
+#     res <- compare_pcoa_to_ref(mat_rand, ref_coords, n_axes = 1)
+#     random_axis_r[i] <- res$axis_r
+#   }
+#   # which(is.na(random_axis_r)) %>% length()
+#   mean(random_axis_r >= correlation, na.rm = TRUE)  # empirical p-value for the observed correlation
+# }
+# 
+# pval_14 <- get_pval_comparison_pcoa_specific_variables(fmat = mat_ord_fixed[,signif_vars], 
+#                                                        correlation = correlation_14)
+# 
+# pval_4 <- get_pval_comparison_pcoa_specific_variables(fmat = mat_ord_fixed[,signif_vars_adjusted], 
+#                                                       correlation = correlation_4)
+
+# Figure 
 
 # appendix_pcoa_stability_axis1 <- ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
 #   geom_ribbon(aes(ymin = ci_low, ymax = ci_high), fill = "grey80") +
@@ -212,41 +294,41 @@ pval_4 <- get_pval_comparison_pcoa_specific_variables(fmat = mat_ord_fixed[,sign
 
 
 
-observed_points <- data.frame(
-  n_vars = c(4, 14),
-  mean_r = c(correlation_4, correlation_14),   # replace with actual value
-  label  = c("4 FDR-significant\nvariables", "14 loading-ranked\nvariables")
-)
+# observed_points <- data.frame(
+#   n_vars = c(4, 14),
+#   mean_r = c(correlation_4, correlation_14),   # replace with actual value
+#   label  = c("4 FDR-significant\nvariables", "14 loading-ranked\nvariables")
+# )
+# 
+# appendix_pcoa_stability_axis1 <- ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
+#   geom_ribbon(aes(ymin = ci_low, ymax = ci_high), fill = "grey80") +
+#   geom_line(color = "steelblue", linewidth = 0.8) +
+#   geom_point(color = "steelblue", size = 2) +
+#   # geom_hline(yintercept = 0.9, linetype = "dashed", color = "grey40") +
+#   geom_point(
+#     data = observed_points,
+#     aes(x = n_vars, y = mean_r, color = label, shape = label),
+#     size = 3.5, inherit.aes = FALSE
+#   ) +
+#   ggrepel::geom_label_repel(
+#     data = observed_points,
+#     aes(x = n_vars, y = mean_r, label = label, color = label),
+#     size = 3.2, fill = "white", fontface = "bold",
+#     nudge_y = 0.08, segment.color = "grey30",
+#     show.legend = FALSE, inherit.aes = FALSE
+#   ) +
+#   scale_color_manual(values = c("4 FDR-significant\nvariables" = "firebrick",
+#                                 "14 loading-ranked\nvariables" = "darkorange")) +
+#   scale_shape_manual(values = c("4 FDR-significant\nvariables" = 18,
+#                                 "14 loading-ranked\nvariables" = 17)) +
+#   labs(x        = "Number of variables",
+#        y        = "Axis 1 stability (Spearman r with full ordination)",
+#        # title    = "How many variables needed to recover axis 1?",
+#        # subtitle = "Dashed line = r = 0.90 stability threshold",
+#        color    = NULL, shape = NULL) +
+#   theme_minimal(base_size = 11) +
+#   theme(legend.position = "none")
+# 
+# appendix_pcoa_stability_axis1
 
-appendix_pcoa_stability_axis1 <- ggplot(stability_by_prop, aes(x = n_vars, y = mean_r)) +
-  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), fill = "grey80") +
-  geom_line(color = "steelblue", linewidth = 0.8) +
-  geom_point(color = "steelblue", size = 2) +
-  geom_hline(yintercept = 0.9, linetype = "dashed", color = "grey40") +
-  geom_point(
-    data = observed_points,
-    aes(x = n_vars, y = mean_r, color = label, shape = label),
-    size = 3.5, inherit.aes = FALSE
-  ) +
-  ggrepel::geom_label_repel(
-    data = observed_points,
-    aes(x = n_vars, y = mean_r, label = label, color = label),
-    size = 3.2, fill = "white", fontface = "bold",
-    nudge_y = 0.08, segment.color = "grey30",
-    show.legend = FALSE, inherit.aes = FALSE
-  ) +
-  scale_color_manual(values = c("4 FDR-significant\nvariables" = "firebrick",
-                                "14 loading-ranked\nvariables" = "darkorange")) +
-  scale_shape_manual(values = c("4 FDR-significant\nvariables" = 18,
-                                "14 loading-ranked\nvariables" = 17)) +
-  labs(x        = "Number of variables",
-       y        = "Axis 1 stability (Spearman r with full ordination)",
-       title    = "How many variables needed to recover axis 1?",
-       subtitle = "Dashed line = r = 0.90 stability threshold",
-       color    = NULL, shape = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(legend.position = "bottom")
 
-appendix_pcoa_stability_axis1
-
-ggsave("draft/fig/appendix_pcoa_stability_axis1.png", appendix_pcoa_stability_axis1)
