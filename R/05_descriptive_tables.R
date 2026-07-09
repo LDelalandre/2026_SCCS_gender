@@ -167,7 +167,7 @@ save_as_docx(table_societies,
 
 predictors <- c("complexity", "technology", "agriculture_cereals", "agriculture_importance",
                 "herding_importance", "herding_milk", "hunting",
-                "warfare_intensity", "warfare_location", "matri")
+                "warfare", "matri")
 
 predictors_detailed %>% 
   left_join(variables %>% select(var_id, source), by = "var_id") %>% 
@@ -176,23 +176,67 @@ predictors_detailed %>%
 
 ## Predictors loadings ####
 
-# Round loadings and rename columns cleanly
+predictors_detailed_tomerge <- predictors_detailed %>% 
+  select(title, var_id, category) %>% 
+  mutate(Analysis = case_when(category == "hunting" ~ "Raw variable used",
+                              category == "warfare" ~ "Raw variable used",
+                              var_id %in% c("SCCS706", "SCCS707") ~ "Discarded",
+                              var_id %in% c("SCCS708", "SCCS680", "SCCS681") ~ "Guttman scale",
+                              TRUE ~ "PCoA"))
+
+category_order <- c( "warfare", "hunting", 
+                     "technology",
+                     "kinship", "complexity",
+                     "agriculture", "herding")
+tech_order <- c("Metalworking", "Manufacture of Pottery", "True Weaving", "Irrigation", "Plow")
+
 table_loadings <- pred_loadings %>%
-  mutate(across(Co1:Co4, ~ round(.x, 3))) %>% 
-  left_join(predictors_detailed %>% select(title, var_id)) %>%
+  mutate(across(Co1:Co4, ~ round(.x, 3))) %>%
+  # mutate(Analysis = "PCoA") %>% 
+  select(-category) %>%
+  select(-Co3, -Co4) %>% 
+  right_join(predictors_detailed_tomerge) %>% 
   rename(
     Category   = category,
     Variable   = title,
     ID = var_id,
+    ID = var_id,
     `Axis 1`   = Co1,
-    `Axis 2`   = Co2,
-    `Axis 3`   = Co3,
-    `Axis 4`   = Co4
+    `Axis 2`   = Co2
   ) %>% 
-  select(Category, Variable, ID, everything()) 
+  select(Category, Variable, ID, Analysis, `Axis 1`, `Axis 2`) %>%
+  mutate(
+    Category = factor(Category, levels = category_order),  # preserve existing category order
+    sort_key = if_else(Category == "technology",
+                       match(Variable, tech_order),          # custom order for technology
+                       row_number())                          # keep original order for everything else
+  ) %>%
+  arrange(Category, sort_key) %>%
+  select(-sort_key) %>%
+  mutate(Category = as.character(Category)) %>%  # back to character for flextable
+  filter(!is.na(Category)) %>% 
+  mutate(Category = if_else(Category == "kinship", "lineage/locality", Category))
+
+codes_max_values_pred <- codes %>% 
+  filter(var_id %in% table_loadings$ID) %>% 
+  group_by(var_id) %>% 
+  mutate(min_value = min(code, na.rm = T),
+         max_value = max(code, na.rm = T)) %>% 
+  filter(code == max_value | code == min_value) %>% 
+  filter(code == max_value) %>% 
+  select(var_id, name, max_value) %>% 
+  mutate(name = if_else(var_id == "SCCS730", "Dominant, the principal subsistence activity", name))
+  
+
+
+table_loadings2 <- table_loadings %>% 
+  left_join(codes_max_values_pred %>% rename(ID = var_id)) %>% 
+  select(Category, Variable, ID, name, max_value, everything()) %>% 
+  rename(`Description of the highest value` = name) %>% 
+  rename(`Highest value` = max_value)
 
 # Build flextable
-predictors_loadings <- flextable(table_loadings) %>%
+predictors_loadings <- flextable(table_loadings2) %>%
   # Merge repeated category cells vertically
   merge_v(j = "Category") %>%
   valign(j = "Category", valign = "top") %>%
@@ -201,23 +245,36 @@ predictors_loadings <- flextable(table_loadings) %>%
   # Shade alternating categories for readability
   bg(i = ~ Category %in% unique(Category)[c(TRUE, FALSE)],
      bg = "#F2F2F2", part = "body") %>%
-  # Highlight strong loadings (|loading| > 0.5)
-  color(i = ~ abs(`Axis 1`) > 0.5, j = "Axis 1", color = "#C00000") %>%
-  color(i = ~ abs(`Axis 2`) > 0.5, j = "Axis 2", color = "#C00000") %>%
-  color(i = ~ abs(`Axis 3`) > 0.5, j = "Axis 3", color = "#C00000") %>%
-  color(i = ~ abs(`Axis 4`) > 0.5, j = "Axis 4", color = "#C00000") %>%
+  # # Highlight strong loadings (|loading| > 0.5)
+  # color(i = ~ abs(`Axis 1`) > 0.5, j = "Axis 1", color = "#C00000") %>%
+  # color(i = ~ abs(`Axis 2`) > 0.5, j = "Axis 2", color = "#C00000")
   # Column widths
   width(j = "Category", width = 1) %>%
   width(j = "Variable", width = 2.7) %>%
   width(j = "ID", width = 0.8) %>%
-  width(j = c("Axis 1", "Axis 2", "Axis 3", "Axis 4"), width = 0.6) %>%
+  width(j = "Description of the highest value", width = 1.5) %>%
+  width(j = "Highest value", width = 0.8) %>%
+  width(j = "Analysis", width = 1.2) %>%
+  width(j = c("Axis 1", "Axis 2"), width = 0.6) %>%
   # Font
   font(fontname = "Times New Roman", part = "all") %>%
   fontsize(size = 10, part = "all") %>%
   # Caption
-  set_caption("Table S3: PCoA variable loadings by category. Values represent 
-              correlations between each variable and the principal coordinate axes. 
-              Strong loadings (|r| > 0.5) are shown in red.")
+  set_caption("Table S3: Predictor variables, and their grouping in 
+  theoretically-informed categories. Variables are categorical, ordinal.
+  As in Table S1, the higest value of a variable, and the description of it, are 
+  provided, to provide an understanding of the coding and its direction.
+  Synthetic predictors were defined for several categories.
+  The method used is specified in the column `Analysis`, which can be:
+  i) using the raw variable when there is one variable in the category;
+  ii) building a Guttman scale (cumulative scale), for the technology category;
+  iii) doing a PCoA with variables of the category and retain the main first or two first axes.
+  In this case, columns Axis 1 and Axis 2 represent the
+              correlations between a variable and principal coordinate axis 1 and 2, respectively.
+              
+  NB: variable SCCS730, approximating reliance on hunting, was recoded in the opposite direction
+  than what is described on D-place, so that high value meant high reliance on hunting.
+              ")
 
 save_as_docx(predictors_loadings, path = "draft/tbl/appendix_predictors_loadings.docx")
 
@@ -258,8 +315,7 @@ short_names <- c(
   "herding_importance"     = "Herding",
   "herding_milk"           = "Herding milk",
   "hunting"                = "Hunting",
-  "warfare_intensity"      = "Warfare intensity",
-  "warfare_location"       = "Warfare location",
+  "warfare"                = "Warfare",
   "matri"                  = "Matrilineality"
 )
 
@@ -311,6 +367,11 @@ table_cor_pred_axes <- cor_table %>%
               ** p<0.01, *** p<0.001).")
 
 save_as_docx(table_cor_pred_axes, path = "draft/tbl/table_cor_pred_axes.docx")
+
+## Control variables ####
+
+predictors_detailed %>% 
+  filter(category == "method")
 
 
 ## Effect of technology ####

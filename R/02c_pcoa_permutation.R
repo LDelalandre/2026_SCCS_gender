@@ -186,8 +186,14 @@ appendix_mean_loading <- df_perm_mean_loadings %>%
   facet_wrap(~axis)
 
 appendix_mean_loading
+ggsave("draft/fig/appendix_mean_loading.png", appendix_mean_loading)
 
+# pvalue for other axes 
+length(which(perm_mean_loadings_ax3 < obs_mean_loading_df %>% 
+               filter(axis == "Ax3") %>% pull(obs_mean_loading)))/length(perm_mean_loadings_ax3)
 
+length(which(perm_mean_loadings_ax5 > obs_mean_loading_df %>% 
+               filter(axis == "Ax5") %>% pull(obs_mean_loading)))/length(perm_mean_loadings_ax3)
 
 ## 4b. Number of variables with positive loading ####
 obs_n_positive  <- sum(obs_loadings_ax1 > 0, na.rm = TRUE)

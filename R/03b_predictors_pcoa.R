@@ -7,6 +7,10 @@ predictors_detailed <- read.csv("output/predictors_detailed.csv")
 
 predictors_data <- sccs %>% 
   filter(var_id %in% predictors_detailed$var_id) 
+# Warfare: remove the unresolved rating, and unclear
+  # mutate(code = case_when (var_id %in% c("SCCS1649", "SCCS1650") & code == 0 ~ NA,
+  #                          var_id %in% c("SCCS1649", "SCCS1650") & code == 88 ~ NA,
+  #                          TRUE ~ code))
 
 coverage_by_cat <- predictors_data %>%
   filter(soc_id %in% whyte_societies) %>%
@@ -28,10 +32,10 @@ coverage_by_cat
 predictors_wide <- predictors_data %>%
   dplyr::select(soc_id, var_id, code) %>%
   tidyr::pivot_wider(names_from = var_id, values_from = code) %>%
-  tibble::column_to_rownames("soc_id") %>% 
-  mutate(# WARFARE
-    SCCS1649 = log(1+SCCS1649),
-    SCCS1650 = log(1+SCCS1650)) 
+  tibble::column_to_rownames("soc_id") 
+  # mutate(# WARFARE
+  #   SCCS1649 = log(1+SCCS1649),
+  #   SCCS1650 = log(1+SCCS1650)) 
 
 # align to the same societies as in the response PCoA
 common_soc <- intersect(rownames(predictors_wide), 
@@ -75,6 +79,7 @@ categories <- split(predictors_detailed$var_id, predictors_detailed$category)
 
 categories[["technology"]] <- NULL
 categories[["hunting"]] <- NULL
+categories[["warfare"]] <- NULL
 cat_results <- lapply(names(categories), function(cat) {
   run_category_pcoa(categories[[cat]], cat)
 })
@@ -172,7 +177,9 @@ pred_loadings <- names(cat_results) %>%
       }
     )
     result
-  }, .id = "category")
+  }, .id = "category") %>% 
+  mutate(Co1 = if_else(category == "agriculture", -Co1, Co1)) # CHANGING THE SING FOR DOWNSTREAM INTERPRETATION
+
 
 # write.csv2(all_loadings, "output/3.1_predictors_pred_loadings.csv", row.names = F)
 
@@ -189,19 +196,20 @@ agriculture <- cat_results[["agriculture"]]$pcoa$vectors %>%
   as.data.frame() %>%
   mutate(Axis.2 = - Axis.2) %>% 
   dplyr::select(agriculture_cereals = Axis.1, agriculture_importance = Axis.2) %>% # importance positive = much agri (and cereal positive = rely mostly on cereals)
-  tibble::rownames_to_column("soc_id")
+  tibble::rownames_to_column("soc_id") %>% 
+  mutate(agriculture_cereals = -agriculture_cereals) # CHANGING THE SING FOR DOWNSTREAM INTERPRETATION
 
 herding <- cat_results[["herding"]]$pcoa$vectors %>%
   as.data.frame() %>%
   dplyr::select(herding_importance = Axis.1, herding_milk = Axis.2) %>% # positive = importance for 1, milked for 2
   tibble::rownames_to_column("soc_id")
 
-warfare <- cat_results[["warfare"]]$pcoa$vectors %>%
-  as.data.frame() %>%
-  dplyr::select(warfare_intensity = Axis.1, warfare_location = Axis.2) %>% # location positive = internal warfare
-  tibble::rownames_to_column("soc_id")
+# warfare <- cat_results[["warfare"]]$pcoa$vectors %>%
+#   as.data.frame() %>%
+#   dplyr::select(warfare_intensity = Axis.1, warfare_location = Axis.2) %>% # location positive = internal warfare
+#   tibble::rownames_to_column("soc_id")
 
-kinship <- cat_results[["kinship"]]$pcoa$vectors %>%
+matri <- cat_results[["kinship"]]$pcoa$vectors %>%
   as.data.frame() %>%
   dplyr::select(matri = Axis.1) %>% # positive = matrilineal/local
   tibble::rownames_to_column("soc_id")
@@ -210,13 +218,18 @@ hunting <- predictors_data %>%
   filter(var_id == "SCCS730") %>%  # importance of hunting and gathering in subsistence
   rename(hunting = code) %>% 
   dplyr::select(soc_id, hunting)
+
+warfare <- predictors_data %>% 
+  filter(var_id == "SCCS693") %>% # frequency of intercommunity armed conflict
+  rename(warfare = code) %>% 
+  dplyr::select(soc_id, warfare)
   
 all_axes <- complexity %>%
   full_join(agriculture, by = "soc_id") %>%
   full_join(herding,     by = "soc_id") %>%
-  full_join(warfare,     by = "soc_id") %>%
   full_join(kinship, by = "soc_id") %>% 
-  left_join(hunting, by = "soc_id")
+  left_join(hunting, by = "soc_id") %>% 
+  full_join(warfare,     by = "soc_id")
 
 response_axes <- pcoa_result$vectors[,c(1:5)] %>%
   as.data.frame() %>%
@@ -229,6 +242,10 @@ pred_resp <- all_axes %>%
     matri < 0      ~ "non_matri",
     matri < 0.5    ~ "intermediate",
     matri >= 0.5   ~ "matri"
-  ) %>% ordered(levels = c("non_matri", "intermediate", "matri")))
+  ) %>% ordered(levels = c("non_matri", "intermediate", "matri"))) %>% 
+  filter(!is.na(complexity)) %>% 
+  mutate(hunting = max(hunting) + 1 - hunting) # RECODE HUNTING
+
+
 
 
