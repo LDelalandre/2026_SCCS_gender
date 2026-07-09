@@ -12,8 +12,15 @@ n_perm <- 999
 # Stores variance explained (10 axes) and loadings on PCo1 for each permutation
 
 perm_variance <- matrix(NA, nrow = n_perm, ncol = 10)
-perm_loadings <- matrix(NA, nrow = n_perm, ncol = ncol(mat_ord_fixed))
-colnames(perm_loadings) <- colnames(mat_ord_fixed)
+
+# One matrix per axis, same structure as before, stored in a named list
+n_axes <- 5
+perm_loadings_list <- lapply(1:n_axes, function(x) {
+  m <- matrix(NA, nrow = n_perm, ncol = ncol(mat_ord_fixed))
+  colnames(m) <- colnames(mat_ord_fixed)
+  m
+})
+names(perm_loadings_list) <- paste0("ax", 1:n_axes)
 
 for (i in 1:n_perm) {
   
@@ -36,15 +43,20 @@ for (i in 1:n_perm) {
   var_explained  <- pos_eigen / sum(pos_eigen)
   perm_variance[i, ] <- var_explained[1:10]
   
-  # Loadings on PCo1
-  site_scores_perm <- pcoa_perm$vectors[, 1]
-  perm_loadings[i, ] <- sapply(colnames(mat_ord_fixed), function(v) {
-    vals <- as.numeric(mat_perm[[v]])
-    cor(site_scores_perm, vals, method = "spearman", use = "complete.obs")
-  })
+  # Loadings on PCo1 to PCo5
+  for (ax in 1:n_axes) {
+    site_scores_perm <- pcoa_perm$vectors[, ax]
+    perm_loadings_list[[ax]][i, ] <- sapply(colnames(mat_ord_fixed), function(v) {
+      vals <- as.numeric(mat_perm[[v]])
+      cor(site_scores_perm, vals, method = "spearman", use = "complete.obs")
+    })
+  }
   
   if (i %% 100 == 0) cat("Permutation", i, "of", n_perm, "\n")
 }
+
+# If you want them as separate named objects (perm_loadings_ax1 ... ax5) instead of a list:
+list2env(setNames(perm_loadings_list, paste0("perm_loadings_", names(perm_loadings_list))), envir = .GlobalEnv)
 
 
 # 2. Variance explained ####
@@ -92,13 +104,19 @@ ggsave("draft/fig/appendix_pcoa_permutation_variance.png", appendix_pcoa_permuta
 
 # 3. Variable loadings on PCo1 ####
 
-obs_site_scores  <- pcoa_result$vectors[, 1] # HERE CHANGE IF I WANT TO SEE OTHER AXES
-obs_loadings_ax1 <- sapply(colnames(mat_ord_fixed), function(v) {
-  vals <- as.numeric(mat_ord_fixed[[v]])
-  cor(obs_site_scores, vals, method = "spearman", use = "complete.obs")
+n_axes <- 5
+obs_loadings_list <- lapply(1:n_axes, function(ax) {
+  obs_site_scores <- pcoa_result$vectors[, ax]
+  sapply(colnames(mat_ord_fixed), function(v) {
+    vals <- as.numeric(mat_ord_fixed[[v]])
+    cor(obs_site_scores, vals, method = "spearman", use = "complete.obs")
+  })
 })
+names(obs_loadings_list) <- paste0("ax", 1:n_axes)
 
-perm_loadings_long <- as.data.frame(perm_loadings) %>%
+# If you want separate named objects obs_loadings_ax1 ... ax5:
+list2env(setNames(obs_loadings_list, paste0("obs_loadings_", names(obs_loadings_list))), envir = .GlobalEnv)
+perm_loadings_ax1_long <- as.data.frame(perm_loadings_ax1) %>%
   pivot_longer(everything(), names_to = "variable", values_to = "loading")
 
 obs_loadings_df <- data.frame(
@@ -125,20 +143,56 @@ pcoa_permutation_loading_ax1 <- ggplot() +
 
 ## 4a. Mean loading across all variables ####
 obs_mean_loading   <- mean(obs_loadings_ax1, na.rm = TRUE)
-perm_mean_loadings <- rowMeans(perm_loadings, na.rm = TRUE)
+
+
+perm_mean_loadings_ax1 <- rowMeans(perm_loadings_ax1, na.rm = TRUE)
+perm_mean_loadings_ax2 <- rowMeans(perm_loadings_ax2, na.rm = TRUE)
+perm_mean_loadings_ax3 <- rowMeans(perm_loadings_ax3, na.rm = TRUE)
+perm_mean_loadings_ax4 <- rowMeans(perm_loadings_ax4, na.rm = TRUE)
+perm_mean_loadings_ax5 <- rowMeans(perm_loadings_ax5, na.rm = TRUE)
+
 p_mean_abs             <- mean(abs(perm_mean_loadings) >= abs(obs_mean_loading))
 p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
 
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
 
-df_perm_mean_loadings <- data.frame(x = perm_mean_loadings)
+df_perm_mean_loadings <- data.frame(Ax1 = perm_mean_loadings_ax1,
+                                    Ax2 = perm_mean_loadings_ax2,
+                                    Ax3 = perm_mean_loadings_ax3,
+                                    Ax4 = perm_mean_loadings_ax4,
+                                    Ax5 = perm_mean_loadings_ax5
+                                    )
 write.csv(df_perm_mean_loadings, "output/02C_df_perm_mean_loadings.csv")
+
+# Observed mean loading per axis (from obs_loadings_list created earlier)
+obs_mean_loading_df <- tibble(
+  axis = paste0("Ax", 1:5),
+  obs_mean_loading = sapply(obs_loadings_list, mean, na.rm = TRUE)
+)
+
+appendix_mean_loading <- df_perm_mean_loadings %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "axis", 
+               values_to = "perm_loading") %>% 
+  ggplot(aes(x = perm_loading)) +
+  geom_histogram(fill = "grey70", color = "white", bins = 40) +
+  geom_vline(data = obs_mean_loading_df,
+             aes(xintercept = obs_mean_loading),
+             color = "red", linewidth = 0.8) +
+  labs(x = "Mean variable loading",
+       y = "Count") +
+  theme_classic(base_size = 11) +
+  facet_wrap(~axis)
+
+appendix_mean_loading
+
+
 
 ## 4b. Number of variables with positive loading ####
 obs_n_positive  <- sum(obs_loadings_ax1 > 0, na.rm = TRUE)
 obs_n_total     <- sum(!is.na(obs_loadings_ax1))
-perm_n_positive <- rowSums(perm_loadings > 0, na.rm = TRUE)
+perm_n_positive <- rowSums(perm_loadings_ax1 > 0, na.rm = TRUE)
 p_positive      <- mean(perm_n_positive >= obs_n_positive)
 
 cat("Observed positive loadings:", obs_n_positive, "/", obs_n_total, "\n")
@@ -151,7 +205,7 @@ cat("Permutation p-value:", round(p_positive, 3), "\n")
 
 p_values_loadings <- sapply(colnames(mat_ord_fixed), function(v) {
   obs  <- obs_loadings_ax1[v]
-  null <- perm_loadings[, v]
+  null <- perm_loadings_ax1[, v]
   if (obs >= 0) {
     mean(null >= obs)   # one-sided: how often does null exceed observed?
   } else {

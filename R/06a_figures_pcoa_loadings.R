@@ -228,7 +228,7 @@ appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == 
   theme_classic(base_size = 11)
 
 
-appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = x)) +
+appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = Ax1)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
   geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
   labs(x        = "Mean variable loading \n on Axis 1",
