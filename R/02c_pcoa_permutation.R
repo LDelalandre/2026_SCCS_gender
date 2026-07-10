@@ -127,7 +127,7 @@ obs_loadings_df <- data.frame(
 # NB: SOME VARIABLES HAVE BEEN RECODED IN DIRECTION SINCE (for the figures)
 # Maybe they should be here too??
 pcoa_permutation_loading_ax1 <- ggplot() +
-  geom_histogram(data = perm_loadings_long, aes(x = loading),
+  geom_histogram(data = df_perm_mean_loadings, aes(x = Ax1),
                  fill = "grey70", color = "white", bins = 40) +
   geom_vline(data = obs_loadings_df, aes(xintercept = observed),
              color = "red", linewidth = 0.6) +
@@ -151,8 +151,8 @@ perm_mean_loadings_ax3 <- rowMeans(perm_loadings_ax3, na.rm = TRUE)
 perm_mean_loadings_ax4 <- rowMeans(perm_loadings_ax4, na.rm = TRUE)
 perm_mean_loadings_ax5 <- rowMeans(perm_loadings_ax5, na.rm = TRUE)
 
-p_mean_abs             <- mean(abs(perm_mean_loadings) >= abs(obs_mean_loading))
-p_mean             <- mean(perm_mean_loadings >= obs_mean_loading)
+p_mean_abs             <- mean(abs(perm_mean_loadings_ax1) >= abs(obs_mean_loading))
+p_mean             <- mean(perm_mean_loadings_ax1 >= obs_mean_loading)
 
 cat("Observed mean loading on PCo1:", round(obs_mean_loading, 3), "\n")
 cat("Permutation p-value:", round(p_mean, 3), "\n")
@@ -246,6 +246,6 @@ nvar_significant <- p_values_loadings_sorted[1:12] %>%  # 12 to cross the 90% th
 
 
 whyte_category_angarika %>% 
-  filter(var_id %in% nvar) %>% 
+  filter(var_id %in% nvar_significant) %>% 
   select(var_id, title, category_Angarika) %>% 
   arrange(category_Angarika)
