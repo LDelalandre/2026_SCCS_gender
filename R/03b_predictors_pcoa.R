@@ -227,7 +227,7 @@ warfare <- predictors_data %>%
 all_axes <- complexity %>%
   full_join(agriculture, by = "soc_id") %>%
   full_join(herding,     by = "soc_id") %>%
-  full_join(kinship, by = "soc_id") %>% 
+  full_join(matri, by = "soc_id") %>% 
   left_join(hunting, by = "soc_id") %>% 
   full_join(warfare,     by = "soc_id")
 

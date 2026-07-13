@@ -150,7 +150,7 @@ ea_wide_coords <- ea_wide %>%
 
 # Correlate each EA variable with each PCoA axis
 ea_loadings <- map_dfr(ea_vars_of_interest, function(v) {
-  map_dfr(1:10, function(ax) {
+  map_dfr(1:5, function(ax) {
     ax_col <- paste0("Ax", ax)
     
     dat <- ea_wide_coords %>%

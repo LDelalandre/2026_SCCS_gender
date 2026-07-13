@@ -124,19 +124,7 @@ obs_loadings_df <- data.frame(
   observed = obs_loadings_ax1
 )
 
-# NB: SOME VARIABLES HAVE BEEN RECODED IN DIRECTION SINCE (for the figures)
-# Maybe they should be here too??
-pcoa_permutation_loading_ax1 <- ggplot() +
-  geom_histogram(data = df_perm_mean_loadings, aes(x = Ax1),
-                 fill = "grey70", color = "white", bins = 40) +
-  geom_vline(data = obs_loadings_df, aes(xintercept = observed),
-             color = "red", linewidth = 0.6) +
-  facet_wrap(~ variable, scales = "free_x") +
-  labs(x        = "Loading on PCo1 (Spearman r)",
-       y        = "Count",
-       title    = "Permuted vs observed loadings on PCo1",
-       subtitle = "Red line = observed; grey = null distribution (999 permutations)") +
-  theme_minimal(base_size = 9)
+
 
 
 # 4. Summary statistics on loadings ####
@@ -187,6 +175,20 @@ appendix_mean_loading <- df_perm_mean_loadings %>%
 
 appendix_mean_loading
 ggsave("draft/fig/appendix_mean_loading.png", appendix_mean_loading)
+
+# NB: SOME VARIABLES HAVE BEEN RECODED IN DIRECTION SINCE (for the figures)
+# Maybe they should be here too??
+pcoa_permutation_loading_ax1 <- ggplot() +
+  geom_histogram(data = df_perm_mean_loadings, aes(x = Ax1),
+                 fill = "grey70", color = "white", bins = 40) +
+  geom_vline(data = obs_loadings_df, aes(xintercept = observed),
+             color = "red", linewidth = 0.6) +
+  facet_wrap(~ variable, scales = "free_x") +
+  labs(x        = "Loading on PCo1 (Spearman r)",
+       y        = "Count",
+       title    = "Permuted vs observed loadings on PCo1",
+       subtitle = "Red line = observed; grey = null distribution (999 permutations)") +
+  theme_minimal(base_size = 9)
 
 # pvalue for other axes 
 length(which(perm_mean_loadings_ax3 < obs_mean_loading_df %>% 

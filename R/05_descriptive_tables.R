@@ -250,11 +250,11 @@ predictors_loadings <- flextable(table_loadings2) %>%
   # color(i = ~ abs(`Axis 2`) > 0.5, j = "Axis 2", color = "#C00000")
   # Column widths
   width(j = "Category", width = 1) %>%
-  width(j = "Variable", width = 2.7) %>%
+  width(j = "Variable", width = 2) %>%
   width(j = "ID", width = 0.8) %>%
   width(j = "Description of the highest value", width = 1.5) %>%
-  width(j = "Highest value", width = 0.8) %>%
-  width(j = "Analysis", width = 1.2) %>%
+  width(j = "Highest value", width = 0.5) %>%
+  width(j = "Analysis", width = 1) %>%
   width(j = c("Axis 1", "Axis 2"), width = 0.6) %>%
   # Font
   font(fontname = "Times New Roman", part = "all") %>%
