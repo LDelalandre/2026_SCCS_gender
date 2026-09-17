@@ -62,6 +62,9 @@ gleeson_id <- gleeson %>%
 
 write.csv(gleeson_id,"output/2026-03_SCCS_gleeson_id.csv", row.names = F)
 
+
+# Galton' problem ####
+
 # glottocode ####
 
 library(lingtypology)
@@ -78,7 +81,6 @@ glottolog_families <- lingtypology::glottolog %>%
 
 societies_glottolog <- societies %>% 
   left_join(glottolog_families)
-
 
 # Analyse ####
 
@@ -345,6 +347,12 @@ post$total <- post$indirect + post$direct
 # summarise: Bayesian credible interval (CI) table
 posterior::summarise_draws(post[, c("indirect", "direct", "total")],
                            mean, sd, ~quantile(.x, probs = c(0.025, 0.975)))
+
+
+
+
+
+
 
 
 

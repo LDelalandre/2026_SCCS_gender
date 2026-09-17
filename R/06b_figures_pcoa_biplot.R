@@ -42,7 +42,7 @@ pcoa_biplot_subsistence <- pred_resp %>%
   left_join(society_subsistence_type, by = "soc_id") %>% 
   left_join(coords_df) %>% 
   filter(!str_detect(label, "Trade")) %>%  # remove trade panel
-  ggplot(aes(x = Axis.1, y = Axis.2, shape = region)) +
+  ggplot(aes(x = Axis.1, y = Axis.2, shape = region6)) +
   geom_point() +
   # ggrepel::geom_text_repel(aes(label = pref_name_for_society)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +

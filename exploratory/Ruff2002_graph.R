@@ -33,7 +33,7 @@ plot(
   pch = 3,
   xaxt = "n",
   xlab = "",
-  ylab = "Women's Height / Men's Height (F/M)",
+  ylab = "Female weight / Male weight",
   ylim = c(min(fm) - 0.02, max(fm) + 0.02)
 )
 

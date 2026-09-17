@@ -181,31 +181,31 @@ societies_mapping_parsed %>% count(soc_id) %>% filter(n > 1)
 
 ## plot ####
 
-# all_loadings <- bind_rows(
-#   var_loadings %>% mutate(source = "SCCS"),
-#   ea_loadings_plot
-# )
-# 
-# # -- plot
-# all_loadings %>%
-#   filter(pco %in% c("PCo1", "PCo2")) %>%
-#   select(var_id_ea, source, pco, loading) %>%
-#   pivot_wider(names_from = pco, values_from = loading) %>%
-#   ggplot(aes(x = PCo1, y = PCo2,
-#              color = source,
-#              label = var_id_ea)) +
-#   geom_segment(aes(xend = 0, yend = 0),
-#                arrow     = arrow(length = unit(0.2, "cm"), ends = "first"),
-#                linewidth = 0.8) +
-#   geom_point(size = 2.5) +
-#   ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
-#   geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
-#   geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
-#   scale_color_brewer(palette = "Set2", name = "Source") +
-#   theme_bw(base_size = 10) +
-#   labs(x     = "PCo1 (formal domination)",
-#        y     = "PCo2 (work segregation)",
-#        title = "EA variables projected on SCCS PCoA axes")
+all_loadings <- bind_rows(
+  ea_loadings %>% mutate(source = "SCCS"),
+  ea_loadings_plot
+)
+
+# -- plot
+all_loadings %>%
+  filter(pco %in% c("PCo1", "PCo2")) %>%
+  select(var_id_ea, source, pco, loading) %>%
+  pivot_wider(names_from = pco, values_from = loading) %>%
+  ggplot(aes(x = PCo1, y = PCo2,
+             color = source,
+             label = var_id_ea)) +
+  geom_segment(aes(xend = 0, yend = 0),
+               arrow     = arrow(length = unit(0.2, "cm"), ends = "first"),
+               linewidth = 0.8) +
+  geom_point(size = 2.5) +
+  ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
+  scale_color_brewer(palette = "Set2", name = "Source") +
+  theme_bw(base_size = 10) +
+  labs(x     = "PCo1 (formal domination)",
+       y     = "PCo2 (work segregation)",
+       title = "EA variables projected on SCCS PCoA axes")
 
 
 variable_definitions
@@ -281,6 +281,7 @@ coords_df_ea <- coords_df_ea %>%
   mutate(Ax1_ea = -Ax1_ea)  # flip sign
 
 
+
 ### loadings ####
 
 # Align by rowname
@@ -316,6 +317,22 @@ scree_plot <- data.frame(
        title = "Scree plot — EA PCoA")
 scree_plot
 
+### Variables ####
+
+loadings <- as.data.frame(cor(mat_ea_filtered, scores[, 1:2], use = "pairwise.complete.obs"))
+loadings$Variable <- rownames(loadings)
+
+arrow_mult <- 0.8 * max(abs(scores[, 1:2]), na.rm = TRUE) / max(abs(loadings[, 1:2]), na.rm = TRUE)
+loadings$PCoA1 <- loadings$PCoA1 * arrow_mult
+loadings$PCoA2 <- loadings$PCoA2 * arrow_mult
+
+print(loadings)  # sanity check: are PCoA1/PCoA2 reasonable, non-NA numbers?
+
+ggplot(loadings) +
+  geom_segment(aes(x = 0, y = 0, xend = PCoA1, yend = PCoA2),
+               arrow = arrow(length = unit(0.2, "cm")), color = "red", linewidth = 1) +
+  geom_text(aes(PCoA1, PCoA2, label = Variable), color = "red") +
+  theme_bw()
 
 ## Correlation ####
 coords_df_merged <- coords_df_ea %>% 
@@ -443,7 +460,8 @@ coords_df_ea %>%
   geom_smooth(method = "lm") +
   scale_x_continuous(transform = "log")
 
-
+# The bigger the population, the lower women's status, if the regression holds
+# Lot of variation though
 
 
 # Pairs of variables of SCCS

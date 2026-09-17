@@ -70,3 +70,5 @@ lm(height_ratio ~ Ax1_ea, data = ea_hr %>%
      filter(soc_id_ea %in% societies_mapping_parsed_whyte$soc_id_ea)) %>% summary()
 
 cor.test(ea_hr$Ax1_ea, ea_hr$height_ratio, use = "complete.obs")
+
+

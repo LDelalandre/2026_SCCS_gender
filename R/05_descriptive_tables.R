@@ -83,19 +83,19 @@ table_resp <- whyte_category_angarika %>%
   theme_zebra %>% 
   set_caption("Table S1: Women's status variables, ordered as in Figure 1. 
   The variables are identified using the 
-  Standard Cross-Cultural Sample's scheme (ID_SCCS), and Whyte's original coding (ID_Whyte).
+  Standard Cross-Cultural Sample's scheme (ID_SCCS), and Whyte's original coding (ID_Whyte). 
   Variable short name was coined for the present paper, whereas the full name is provided in D-PLACE. 
   Note that the full name is sometimes 
   unprecise regarding the direction of variable coding. 
   Variables were integers. We provide a description of the highest value of the variables
-  (as given in D-PLACE), as well as that value.
-  Most of the time, the variables
-  were coded such as high values indicated higher status of women; when it was not the case,
+  (as given in D-PLACE), as well as that value. 
+  Most of the time, the variables 
+  were coded such as high values indicated higher status of women; when it was not the case, 
   we recoded the variables in 
-  the opposite direction. This is indicated it in the column `coding direction
+  the opposite direction. This is indicated in the column `coding direction
   changed`. 
   Finally, variable coverage provides the proportion of societies for which the variable was measured.
-  All variables are retrieable from D-PLACE
+  All variables are retrievable from D-PLACE
   (https://d-place.org/contributions/SCCS), using ID_SCCS.")
 
 table_resp
