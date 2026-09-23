@@ -89,6 +89,8 @@ gleeson_id <- read.csv(here::here("output/2026-03_SCCS_gleeson_id.csv"))
 dimorphism_vals <- gleeson_id %>%
   select(soc_id, height_ratio, male_stature, female_stature)
 
+
+
 dimorphism_vals %>% 
   mutate(ratioMtF <- 1/height_ratio) 
 
@@ -149,8 +151,10 @@ coords_extended %>%
   ggtitle("All the regions grouped")
 
 
-
-
+boxplot_dimorphism_region <- coords_extended %>% 
+  ggplot(aes(x = region6, y = height_ratio)) +
+  geom_boxplot() + 
+  geom_point()
 
 # Model domination size ####
 
@@ -350,9 +354,184 @@ posterior::summarise_draws(post[, c("indirect", "direct", "total")],
 
 
 
+# SMA rather than ratio ####
+# Following Holden and Mace 1999
+
+dimorphism_vals %>% 
+  ggplot(aes(x = male_stature, y = female_stature)) +
+  geom_point()
+
+library(smatr)
+
+mod_dimorphism <- sma(female_stature ~ male_stature, data = coords_extended, log = "") # to log-transform: log = "xy". But seems unnecessary 
+summary(mod_dimorphism)
+
+coords_extended$dimorphism_resid <- NA
+non_na <- !is.na(coords_extended$male_stature) & !is.na(coords_extended$female_stature)
+coords_extended$dimorphism_resid[non_na] <- residuals(mod_dimorphism)
+
+coords_extended %>% 
+  ggplot(aes(x = Ax1, y = dimorphism_resid)) +
+  geom_point()
+
+# Phylogenetic supertree (Minocher2019) ####
+
+library(ape)
+
+# the tree itself
+minocher_tree <- ape::read.nexus("data/minocher2019/Time-calibrated SCCS supertree ultrametric.nex")
+class(minocher_tree)      # should be "phylo"
+length(minocher_tree$tip.label)
+head(minocher_tree$tip.label)
 
 
 
+## Match societies names ####
+
+# the name-matching table -- inspect columns before assuming names
+lookup <- read.csv("data/minocher2019/socnamesphylo.csv")
+str(lookup)
+head(lookup)
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(stringi)
+
+# normalize: strip accents, lowercase, drop punctuation, squeeze whitespace
+norm <- function(x) {
+  x |>
+    stri_trans_general("Latin-ASCII") |>
+    str_to_lower() |>
+    str_replace_all("\\s*\\([^)]*\\)", "") |>   # drop parenthetical bits like "(SCCS2)" or "(Was Nyae)"
+    str_replace_all("[^a-z0-9 ]", " ") |>
+    str_squish()
+}
+
+# 1. Long table of all names per society, with a priority (lower = better)
+names_long <- bind_rows(
+  societies |> transmute(soc_id, name = pref_name_for_society, priority = 1),
+  societies |> transmute(soc_id, name = ORIG_name_and_ID_in_this_dataset, priority = 2),
+  societies |>
+    select(soc_id, alt_names_by_society) |>
+    separate_rows(alt_names_by_society, sep = ",\\s*") |>
+    transmute(soc_id, name = alt_names_by_society, priority = 3)
+) |>
+  mutate(key = norm(name)) |>
+  filter(key != "") |>
+  distinct(soc_id, key, .keep_all = TRUE)
+
+# 2. Join the lookup
+lookup$key <- norm(lookup$socname)
+
+matched <- lookup |>
+  left_join(names_long, by = "key", relationship = "many-to-many")
+
+# 3. Diagnostics
+unmatched <- matched |> filter(is.na(soc_id))            # no society found
+ambiguous <- matched |>                                   # one socname -> several societies
+  filter(!is.na(soc_id)) |>
+  group_by(socname) |> filter(n_distinct(soc_id) > 1) |> ungroup()
+
+# 4. Resolve: keep best-priority match per socname
+lookup_matched <- matched |>
+  filter(!is.na(soc_id)) |>
+  group_by(socname) |>
+  slice_min(priority, n = 1, with_ties = TRUE) |>
+  ungroup()
+
+# also check the reverse: SCCS societies with no phylo entry, or duplicated
+setdiff(societies$soc_id, lookup_matched$soc_id)
+lookup_matched |> count(soc_id) |> filter(n > 1)
+
+
+## Prune the tree to my sample ####
+
+coords_matched <- coords_extended %>%
+  left_join(lookup_matched, by = "soc_id") %>% 
+  filter(!is.na(height_ratio))
+
+# check for anything that didn't match before pruning
+coords_matched %>% filter(is.na(phylo)) %>% select(soc_id, pref_name_for_society)
+
+# prune the tree to just your sample (plain ape, no glottoTrees needed --
+# this tree is already society-level, not language-classification-level)
+my_tree <- ape::keep.tip(minocher_tree, tip = coords_matched$phylo)
+
+plot.phylo(my_tree)
+
+
+# 
+# # Brownian-motion correlation matrix, same construction as before
+# A_ling_minocher <- ape::vcv.phylo(my_tree, corr = TRUE)
+# ord <- match(coords_matched$phylo, rownames(A_ling_minocher))
+# A_ling_minocher <- A_ling_minocher[ord, ord]
+# rownames(A_ling_minocher) <- colnames(A_ling_minocher) <- coords_matched$soc_id
+# 
+# # same diagnostic as before -- worth comparing directly to the glottoTrees version
+# ev <- eigen(A_ling_minocher, symmetric = TRUE, only.values = TRUE)$values
+# sum(ev < 1e-6); range(ev)
 
 
 
+## Model ####
+
+library(ape)
+library(brms)
+
+tree <- my_tree
+dat  <- coords_matched
+# rescale the variables
+dat <- dat |> mutate(
+  height_z = as.numeric(scale(height_ratio)),
+  Ax1_z    = as.numeric(scale(Ax1))
+)
+# refit with height_z ~ Ax1_z + (1 | gr(phylo, cov = A)) + (1 | region6)
+
+# 2. Phylogenetic correlation matrix
+A <- ape::vcv(tree, corr = TRUE)
+A <- A[dat$phylo, dat$phylo]      # not required, but confirms names line up
+stopifnot(all(dat$phylo %in% rownames(A)))
+
+# 3. Model
+mod_domination_phylo <- brm(
+  height_z ~ Ax1_z + (1 | gr(phylo, cov = A)),
+  data  = dat,
+  data2 = list(A = A),
+  family = gaussian(),
+  prior = c(prior(normal(0, 0.5), class = b),
+            prior(normal(0, 0.5), class = Intercept),
+            prior(exponential(1), class = sd),
+            prior(exponential(1), class = sigma)),
+  cores = 4, iter = 4000, seed = 42,
+  control = list(adapt_delta = 0.99)
+)
+
+
+mod_domination_phylo
+r2 <- mod_domination_phylo %>% bayes_R2() 
+
+
+# More digits
+print(mod_domination_phylo, digits = 4)
+fixef(mod_domination_phylo, probs = c(0.025, 0.05, 0.95, 0.975))
+
+# Effect of Ax1 only: probability of direction
+post <- as_draws_df(mod_domination_phylo)
+mean(post$b_Ax1 > 0)
+
+# Phylogenetic signal (lambda) with its uncertainty
+lambda <- post$sd_phylo__Intercept^2 /
+  (post$sd_phylo__Intercept^2 + post$sd_region6__Intercept^2 + post$sigma^2)
+quantile(lambda, c(0.025, 0.5, 0.975))
+
+# Variance explained by Ax1 alone vs. Ax1 + random effects
+bayes_R2(mod_domination_phylo, re_formula = NA)   # fixed effects only (marginal)
+bayes_R2(mod_domination_phylo)                    # conditional (what you ran)
+
+
+# Compare the two 
+#TODO
+mod_phylo <- add_criterion(mod_domination_phylo, "loo")
+mod_nophylo <- add_criterion(mod_domination_size, "loo")   # refit on the same 46 rows
+loo_compare(mod_phylo, mod_nophylo)

@@ -232,6 +232,7 @@ mod_dow_ling_only <- ivreg(
 )
 summary(mod_dow_ling_only, diagnostics = TRUE)
 
+## NEGATIVE R square. The model does not work. Not enough data.
 
 # Phylogenetic model ####
 
