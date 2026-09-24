@@ -458,20 +458,10 @@ coords_matched %>% filter(is.na(phylo)) %>% select(soc_id, pref_name_for_society
 # this tree is already society-level, not language-classification-level)
 my_tree <- ape::keep.tip(minocher_tree, tip = coords_matched$phylo)
 
+
+png("draft/fig/tree_plot.png", width = 20, height = 25, units = "cm", res = 300)
 plot.phylo(my_tree)
-
-
-# 
-# # Brownian-motion correlation matrix, same construction as before
-# A_ling_minocher <- ape::vcv.phylo(my_tree, corr = TRUE)
-# ord <- match(coords_matched$phylo, rownames(A_ling_minocher))
-# A_ling_minocher <- A_ling_minocher[ord, ord]
-# rownames(A_ling_minocher) <- colnames(A_ling_minocher) <- coords_matched$soc_id
-# 
-# # same diagnostic as before -- worth comparing directly to the glottoTrees version
-# ev <- eigen(A_ling_minocher, symmetric = TRUE, only.values = TRUE)$values
-# sum(ev < 1e-6); range(ev)
-
+dev.off()
 
 
 ## Model ####
@@ -489,7 +479,7 @@ dat <- dat |> mutate(
 # refit with height_z ~ Ax1_z + (1 | gr(phylo, cov = A)) + (1 | region6)
 
 # 2. Phylogenetic correlation matrix
-A <- ape::vcv(tree, corr = TRUE)
+A <- ape::vcv(tree, corr = TRUE) # covariance matrix of societies
 A <- A[dat$phylo, dat$phylo]      # not required, but confirms names line up
 stopifnot(all(dat$phylo %in% rownames(A)))
 
@@ -507,10 +497,28 @@ mod_domination_phylo <- brm(
   control = list(adapt_delta = 0.99)
 )
 
+mod_domination_nophylo <- brm(
+  height_z ~ Ax1_z ,
+  data  = dat,
+  family = gaussian(),
+  prior = c(prior(normal(0, 0.5), class = b),
+            prior(normal(0, 0.5), class = Intercept),
+            prior(exponential(1), class = sigma)),
+  cores = 4, iter = 4000, seed = 42,
+  control = list(adapt_delta = 0.99)
+)
+
 
 mod_domination_phylo
 r2 <- mod_domination_phylo %>% bayes_R2() 
 
+plot(mod_domination_phylo)
+plot(conditional_effects(mod_domination_phylo), points = TRUE)
+
+# phylogenetic signal (lambda) = ICC intraclass correlation coefficient
+hyp <- "sd_phylo__Intercept^2 / (sd_phylo__Intercept^2 + sigma^2) = 0"
+(hyp <- hypothesis(mod_domination_phylo, hyp, class = NULL))
+plot(hyp)
 
 # More digits
 print(mod_domination_phylo, digits = 4)
@@ -531,7 +539,119 @@ bayes_R2(mod_domination_phylo)                    # conditional (what you ran)
 
 
 # Compare the two 
-#TODO
-mod_phylo <- add_criterion(mod_domination_phylo, "loo")
-mod_nophylo <- add_criterion(mod_domination_size, "loo")   # refit on the same 46 rows
+mod_phylo   <- add_criterion(mod_domination_phylo,   "loo")
+mod_nophylo <- add_criterion(mod_domination_nophylo, "loo")
 loo_compare(mod_phylo, mod_nophylo)
+
+loo(mod_domination_phylo)
+loo(mod_domination_nophylo)
+
+
+## Spatial autocorrelation in the residuals? ####
+
+library(Matrix)      # nearPD(), to force a valid correlation matrix
+
+# Dependency-free replacement for geosphere::distm(fun = distHaversine).
+# Takes a matrix/data.frame with columns (lon, lat) in decimal degrees,
+# returns an n x n matrix of great-circle distances in km.
+haversine_dist_matrix <- function(lonlat, R = 6371) {
+  lon <- lonlat[, 1] * pi / 180
+  lat <- lonlat[, 2] * pi / 180
+  n <- length(lon)
+  D <- matrix(0, n, n)
+  for (i in seq_len(n - 1)) {
+    dlon <- lon[(i + 1):n] - lon[i]
+    dlat <- lat[(i + 1):n] - lat[i]
+    a <- sin(dlat / 2)^2 + cos(lat[i]) * cos(lat[(i + 1):n]) * sin(dlon / 2)^2
+    a <- pmin(pmax(a, 0), 1)          # guard against tiny floating-point overshoot
+    d <- 2 * R * asin(sqrt(a))
+    D[i, (i + 1):n] <- d
+    D[(i + 1):n, i] <- d
+  }
+  D
+}
+
+
+stopifnot(!anyNA(coords_extended$Long), !anyNA(coords_extended$Lat))
+
+coords_extended_nogap <- coords_extended %>% filter(!is.na(height_ratio))
+n   <- nrow(coords_extended_nogap)
+ids <- coords_extended_nogap$soc_id
+
+# SPATIAL matrix
+coords_mat <- as.matrix(coords_extended_nogap[, c("Long", "Lat")])
+D_sp <- haversine_dist_matrix(coords_mat)   # km
+dimnames(D_sp) <- list(ids, ids)
+
+# 1a. Row-standardized inverse-distance weights (for LAG covariates, step 4)
+W_sp <- 1 / (D_sp + 1)     # +1km guards the diagonal before we zero it
+diag(W_sp) <- 0
+W_sp <- W_sp / rowSums(W_sp)   # rows sum to 1
+
+# 1b. Exponential-decay CORRELATION matrix (for the brms gr(cov=) approach, step 5)
+# phi = distance scale over which similarity decays. Median pairwise
+# distance is a reasonable data-driven default -- try a couple of
+# alternatives (e.g. 1000km, or the 25th percentile) as a sensitivity check.
+phi_sp <- median(D_sp[upper.tri(D_sp)])
+A_sp <- exp(-D_sp / phi_sp)
+diag(A_sp) <- 1
+A_sp <- as.matrix(Matrix::nearPD(A_sp, corr = TRUE)$mat)  # force valid PD correlation matrix
+dimnames(A_sp) <- list(ids, ids)
+
+resid_vec <- residuals(mod_domination_phylo)[, "Estimate"]
+ape::Moran.I(resid_vec, W_sp)     # spatial autocorrelation in residuals
+
+## Plot ####
+
+### Annotation ####
+
+post <- as_draws_df(mod_domination_phylo)
+
+# Slope on the original scale
+# per SD of Ax1 (keeps numbers readable): b_z * sy
+beta_draws <- post$b_Ax1_z * sy
+beta_q <- quantile(beta_draws, c(0.5, 0.025, 0.975))
+
+# R²: marginal = Ax1 only; conditional = Ax1 + phylogeny
+r2_marg <- bayes_R2(mod_domination_phylo, re_formula = NA)
+r2_cond <- bayes_R2(mod_domination_phylo)
+
+# Phylogenetic signal
+lambda_draws <- post$sd_phylo__Intercept^2 /
+  (post$sd_phylo__Intercept^2 + post$sigma^2)
+lam_q <- quantile(lambda_draws, c(0.5, 0.025, 0.975))
+
+n <- nrow(dat)   # the 46 societies actually in the model
+
+fmt <- function(q, d) sprintf(paste0("%.", d, "f [%.", d, "f, %.", d, "f]"), q[1], q[2], q[3])
+
+label_text <- paste0(
+  "R² marginal = ",    fmt(unlist(r2_marg[1, c("Estimate", "Q2.5", "Q97.5")]), 2), "\n",
+  "R² conditional = ", fmt(unlist(r2_cond[1, c("Estimate", "Q2.5", "Q97.5")]), 2), "\n",
+  "β = ",              fmt(beta_q, 3), " per SD of Ax1\n",
+  "λ = ",              fmt(lam_q, 2), "\n",
+  "n = ", n
+)
+
+### Plot ####
+
+# Constants used when standardizing (compute from the same data the model was fit on)
+mx <- mean(dat$Ax1);           sx <- sd(dat$Ax1)
+my <- mean(dat$height_ratio);  sy <- sd(dat$height_ratio)
+
+# Prediction grid on the ORIGINAL Ax1 scale, converted to z for the model
+grid <- tibble(Ax1 = seq(min(dat$Ax1), max(dat$Ax1), length.out = 100)) |>
+  mutate(Ax1_z = (Ax1 - mx) / sx)
+
+pred <- grid |>
+  tidybayes::add_epred_draws(mod_domination_phylo, re_formula = NA) |>   # population-level line
+  mutate(height_pred = .epred * sy + my)                      # back-transform y
+
+biplot_dimorphism <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
+  tidybayes::stat_lineribbon(.width = c(0.5, 0.95), alpha = 0.3, fill = "steelblue") +
+  geom_point(data = dat, aes(y = height_ratio)) +
+  annotate("text",
+           x = min(dat$Ax1), y = max(dat$height_ratio),
+           label = label_text, hjust = 0, vjust = 1, size = 3.2, family = "mono") +
+  labs(x = "Axis 1", y = "Height ratio") +
+  theme_classic()

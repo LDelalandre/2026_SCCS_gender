@@ -138,7 +138,7 @@ W_sp_eff <- W_sp_eff / rowSums(W_sp_eff)
 #    current model's residuals? Do this before building anything else.
 # ------------------------------------------------------------
 # library(ape)
-resid_vec <- residuals(mod_domination_size)[, "Estimate"]
+resid_vec <- residuals(mod_domination_phylo)[, "Estimate"]
 ape::Moran.I(resid_vec, W_sp)     # spatial autocorrelation in residuals
 ape::Moran.I(resid_vec, W_ling)   # linguistic autocorrelation in residuals
 ape::Moran.I(resid_vec, W_sp_eff)   # linguistic autocorrelation in residuals
