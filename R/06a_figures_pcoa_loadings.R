@@ -16,7 +16,7 @@ df_perm_mean_loadings <- read.csv("output/02C_df_perm_mean_loadings.csv")
 # Correlate original variables with society PCoA scores
 var_loadings <- cor(
   mat_filtered,
-  pred_resp %>% select(Axis.1:Axis.5),
+  response_axes %>% select(Axis.1:Axis.5),
   use = "pairwise.complete.obs"
 ) %>%
   as.data.frame() %>%

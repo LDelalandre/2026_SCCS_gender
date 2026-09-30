@@ -484,30 +484,38 @@ A <- A[dat$phylo, dat$phylo]      # not required, but confirms names line up
 stopifnot(all(dat$phylo %in% rownames(A)))
 
 # 3. Model
-mod_domination_phylo <- brm(
-  height_z ~ Ax1_z + (1 | gr(phylo, cov = A)),
-  data  = dat,
-  data2 = list(A = A),
-  family = gaussian(),
-  prior = c(prior(normal(0, 0.5), class = b),
-            prior(normal(0, 0.5), class = Intercept),
-            prior(exponential(1), class = sd),
-            prior(exponential(1), class = sigma)),
-  cores = 4, iter = 4000, seed = 42,
-  control = list(adapt_delta = 0.99)
-)
+run_models <- F
+if (run_models){
+  mod_domination_phylo <- brm(
+    height_z ~ Ax1_z + (1 | gr(phylo, cov = A)),
+    data  = dat,
+    data2 = list(A = A),
+    family = gaussian(),
+    prior = c(prior(normal(0, 0.5), class = b),
+              prior(normal(0, 0.5), class = Intercept),
+              prior(exponential(1), class = sd),
+              prior(exponential(1), class = sigma)),
+    cores = 4, iter = 4000, seed = 42,
+    control = list(adapt_delta = 0.99)
+  )
+  
+  mod_domination_nophylo <- brm(
+    height_z ~ Ax1_z ,
+    data  = dat,
+    family = gaussian(),
+    prior = c(prior(normal(0, 0.5), class = b),
+              prior(normal(0, 0.5), class = Intercept),
+              prior(exponential(1), class = sigma)),
+    cores = 4, iter = 4000, seed = 42,
+    control = list(adapt_delta = 0.99)
+  )
+  
+  saveRDS(mod_domination_phylo, here::here("output/2026-03-19_whyte_mod_domination_phylo.rds"))
+  saveRDS(mod_domination_nophylo, here::here("output/2026-03-19_whyte_mod_domination_nophylo.rds"))
+}
 
-mod_domination_nophylo <- brm(
-  height_z ~ Ax1_z ,
-  data  = dat,
-  family = gaussian(),
-  prior = c(prior(normal(0, 0.5), class = b),
-            prior(normal(0, 0.5), class = Intercept),
-            prior(exponential(1), class = sigma)),
-  cores = 4, iter = 4000, seed = 42,
-  control = list(adapt_delta = 0.99)
-)
-
+mod_domination_phylo <- readRDS(here::here("output/2026-03-19_whyte_mod_domination_phylo.rds"))
+mod_domination_nophylo <- readRDS(here::here("output/2026-03-19_whyte_mod_domination_nophylo.rds"))
 
 mod_domination_phylo
 r2 <- mod_domination_phylo %>% bayes_R2() 
@@ -647,7 +655,7 @@ pred <- grid |>
   tidybayes::add_epred_draws(mod_domination_phylo, re_formula = NA) |>   # population-level line
   mutate(height_pred = .epred * sy + my)                      # back-transform y
 
-biplot_dimorphism <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
+biplot_dimorphism_phylo <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
   tidybayes::stat_lineribbon(.width = c(0.5, 0.95), alpha = 0.3, fill = "steelblue") +
   geom_point(data = dat, aes(y = height_ratio)) +
   annotate("text",
@@ -655,3 +663,5 @@ biplot_dimorphism <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
            label = label_text, hjust = 0, vjust = 1, size = 3.2, family = "mono") +
   labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
+
+ggsave("draft/fig/biplot_dimorphism_phylo.png", biplot_dimorphism_phylo)

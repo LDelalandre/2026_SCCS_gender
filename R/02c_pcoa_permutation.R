@@ -1,7 +1,5 @@
 # is the signal real? (vs random)
 
-source("R/02b_pcoa_core.R")  # provides: pcoa_result, mat_ord_fixed, ordinal_cols, binary_cols
-
 library(cluster)
 library(ape)
 

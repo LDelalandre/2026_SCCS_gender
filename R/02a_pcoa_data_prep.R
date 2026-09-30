@@ -1,4 +1,3 @@
-source("R/01_import.R")
 source("R/functions.R")
 
 
@@ -72,6 +71,30 @@ sccs <- sccs_raw %>%
   rbind(sccs_recoded_vars)
 
 
+## Subsistence type of societies ####
+codes_SCCS820 <- codes %>% 
+  filter(var_id == "SCCS820") %>% 
+  select(code, description) %>% 
+  rename(SCCS820 = code) %>% 
+  mutate(SCCS820 = as.factor(SCCS820))
+
+society_subsistence_type <- sccs %>% 
+  filter(soc_id %in% pred_resp$soc_id) %>% 
+  filter(var_id %in% c("SCCS820", "SCCS833")) %>%
+  select(soc_id, var_id, code) %>% 
+  pivot_wider(names_from = var_id, values_from = code) %>% 
+  # filter(!SCCS820 == 8) %>% 
+  mutate(SCCS820 = as.factor(SCCS820)) %>% 
+  left_join(societies %>% select(soc_id, pref_name_for_society)) %>% 
+  left_join(codes_SCCS820) %>% 
+  mutate(label = paste(SCCS820, description, sep = "_")) 
+
+society_subsistence_type %>% 
+  group_by(SCCS820) %>% 
+  summarize(n = n())
+
+
+
 ## Build a matrix ####
 whyte_data <- sccs %>% 
   filter(var_id %in% whyte_vars$var_id) %>% 
@@ -80,6 +103,19 @@ whyte_data <- sccs %>%
   slice_max(year, na_rm = TRUE, n = 1) %>%
   ungroup()
 
+
+# Subset on the agricultural societies only (OPTIONAL)
+subset_agri <- F
+if (subset_agri){
+  whyte_data <- whyte_data %>% 
+    left_join(society_subsistence_type %>% select(soc_id, description)) %>% 
+    filter(description %in% c("Incipient Agriculture",
+                              "Extensive Agriculture",
+                              "Intensive Agriculture",
+                              "Domestic Animals"))
+}
+
+  
 whyte_data_wide <- whyte_data %>%
   dplyr::select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code) %>% 

@@ -17,26 +17,6 @@ pred_resp %>%
 
 # Subsistence ####
 
-codes_SCCS820 <- codes %>% 
-  filter(var_id == "SCCS820") %>% 
-  select(code, description) %>% 
-  rename(SCCS820 = code) %>% 
-  mutate(SCCS820 = as.factor(SCCS820))
-
-society_subsistence_type <- sccs %>% 
-  filter(soc_id %in% pred_resp$soc_id) %>% 
-  filter(var_id %in% c("SCCS820", "SCCS833")) %>%
-  select(soc_id, var_id, code) %>% 
-  pivot_wider(names_from = var_id, values_from = code) %>% 
-  # filter(!SCCS820 == 8) %>% 
-  mutate(SCCS820 = as.factor(SCCS820)) %>% 
-  left_join(societies %>% select(soc_id, pref_name_for_society)) %>% 
-  left_join(codes_SCCS820) %>% 
-  mutate(label = paste(SCCS820, description, sep = "_")) 
-
-society_subsistence_type %>% 
-  group_by(SCCS820) %>% 
-  summarize(n = n())
 
 pcoa_biplot_subsistence <- pred_resp %>%
   left_join(society_subsistence_type, by = "soc_id") %>% 
