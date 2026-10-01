@@ -118,8 +118,8 @@ coord_societies <- coords_df %>%
   select(pref_name_for_society, soc_id, Ax1, main_focal_year, region6, origLat, origLong,
          HRAF_name_ID, HRAF_link) %>% 
   mutate(Ax1 = round(Ax1, digits = 3))%>%
-  mutate(HRAF_link = utils::URLencode(HRAF_link, repeated = TRUE)) # for URLs
-
+  mutate(HRAF_link = utils::URLencode(HRAF_link, repeated = TRUE)) %>% # for URLs
+  left_join(coords_matched_86 %>% select(soc_id, phylo))
 
 table_societies<- coord_societies %>%
   flextable() %>%
@@ -132,7 +132,8 @@ table_societies<- coord_societies %>%
     origLat = "Latitude",
     origLong = "Longitude",
     HRAF_name_ID = "HRAF name (ID)",
-    HRAF_link = "HRAF URL"
+    HRAF_link = "HRAF URL",
+    phylo = "Society name in the phylogenetic tree"
   ) %>%
   fontsize(size = 7) %>%
   fontsize(size = 8, part = "header") %>%
@@ -145,6 +146,7 @@ table_societies<- coord_societies %>%
   width(j = 7, width = 1.4, unit = "cm") %>%
   width(j = 8, width = 1.4, unit = "cm") %>%
   width(j = 9, width = 5, unit = "cm") %>%
+  width(j = 10, width = 1.2, unit = "cm") %>%
   padding(padding = 2, part = "all") %>%
   theme_zebra() %>% 
   compose(
@@ -180,8 +182,8 @@ predictors_detailed_tomerge <- predictors_detailed %>%
   select(title, var_id, category) %>% 
   mutate(Analysis = case_when(category == "hunting" ~ "Raw variable used",
                               category == "warfare" ~ "Raw variable used",
-                              var_id %in% c("SCCS706", "SCCS707") ~ "Discarded",
-                              var_id %in% c("SCCS708", "SCCS680", "SCCS681") ~ "Guttman scale",
+                              var_id %in% c("SCCS708", "SCCS680", "SCCS681",
+                                            "SCCS706", "SCCS707") ~ "Technological intensification scale",
                               TRUE ~ "PCoA"))
 
 category_order <- c( "warfare", "hunting", 

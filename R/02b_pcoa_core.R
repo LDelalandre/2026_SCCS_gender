@@ -6,7 +6,7 @@ gower_ordinal <- cluster::daisy(
   type = list(ordratio = ordinal_cols, symm = binary_cols)
 )
 
-pcoa_result <- ape::pcoa(gower_ordinal)
+pcoa_result <- ape::pcoa(gower_ordinal, correction = "none")
 
 saveRDS(pcoa_result, here::here("output/pcoa_result"))
 
@@ -46,37 +46,6 @@ coords_df <- coords_df %>%
   left_join(societies_region %>% 
               select(soc_id, region6), 
             by = "soc_id")
-
-
-# library(sf)
-# library(rnaturalearth)
-# library(dplyr)
-# 
-# world <- ne_countries(scale = "medium", returnclass = "sf") %>%
-#   select(continent)
-# 
-# pts <- coords_df %>%
-#   st_as_sf(coords = c("origLong", "origLat"), crs = 4326, remove = FALSE)
-# 
-# pts <- st_join(pts, world, join = st_intersects)
-# 
-# missing <- is.na(pts$continent)
-# if (any(missing)) {
-#   nearest_idx <- st_nearest_feature(pts[missing, ], world)
-#   pts$continent[missing] <- world$continent[nearest_idx]
-# }
-# 
-# coords_df$continent <- pts$continent
-# 
-# 
-# coords_df <- coords_df %>%
-#   mutate(continent = case_when(
-#     pref_name_for_society %in% c("Semang", "Iban", "Toradja", "Javanese", "Alorese", "Kimam") ~ "Oceania",
-#     pref_name_for_society %in% c("Chukchi", "Nivkh", "Irish", "Ancient Romans") ~ "Eurasia",
-#     continent == "Asia" ~ "Eurasia",
-#     TRUE ~ continent
-#   )) %>% 
-#   rename(region = continent)
 
 # Check the distribution
 table(coords_df$region6)

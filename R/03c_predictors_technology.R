@@ -85,7 +85,7 @@ compute_cs(technology_data, c("weaving", "irrigation", "plow"))
 
 technology_data <- technology_data %>%
   mutate(
-    technology = rowSums(across(c(weaving, irrigation, plow)), na.rm = FALSE)
+    technology = rowSums(across(c(weaving, irrigation, plow, metalworking, pottery)), na.rm = FALSE)
   )
 
 pred_resp <- pred_resp %>% 

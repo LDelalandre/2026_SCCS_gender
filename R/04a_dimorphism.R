@@ -218,139 +218,6 @@ coords_extended %>%
   facet_wrap(~region6)
 
 
-# Model complexity size ####
-
-# TODO: compute complexity for all of Gleeson's data points!!
-# TODO: add control on region6?
-
-pred_resp_dimorphism <- coords_extended %>% 
-  left_join(pred_resp, by = "soc_id") %>% 
-  filter(!is.na(complexity)) 
-
-pred_resp_dimorphism %>% 
-  ggplot(aes(x = complexity, y = height_ratio)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-
-run_model <- F
-
-if (run_model == T){
-  mod_complexity_size <- brm(
-    height_ratio ~ complexity + (1|region6),
-    family = gaussian(),
-    prior = c(prior(normal(0, 0.5), class = b),
-              prior(normal(0, 0.5), class = Intercept),
-              prior(exponential(1), class = sd),
-              prior(exponential(1), class = sigma)),
-    data = pred_resp_dimorphism %>% arrange(complexity),
-    cores = 4, iter = 4000, seed = 42,
-    control = list(adapt_delta = 0.99)  # accept 99% of the steps during warmup, and not only 80%. Forces more cautions, smaller steps. I do it because variance in size dimorphism among region6s is not substantive, - or I don't have enough measurements per region6 - and this caused some problems.
-  )
-  saveRDS(mod_complexity_size, here::here("output/2026-03-19_whyte_mod_complexity_size.rds"))
-}
-
-
-mod_complexity_size <- readRDS(here::here("output/2026-03-19_whyte_mod_complexity_size.rds"))
-
-
-mod_complexity_size %>% summary()
-
-pred_resp_dimorphism %>%
-  tidybayes::add_epred_draws(mod_complexity_size, ndraws = 100) %>%
-  ggplot(aes(x = complexity, y = height_ratio)) +
-  tidybayes::stat_lineribbon(aes(y = .epred), 
-                             .width = c(0.5, 0.95), 
-                             alpha = 0.3, 
-                             fill = "steelblue") +
-  geom_point() +
-  labs(x = "Complexity", y = "Height ratio") +
-  theme_classic()
-
-
-# Basic PPC - most informative first look
-pp_check(mod_complexity_size, ndraws = 100)
-
-# Check the mean
-pp_check(mod_complexity_size, type = "stat", stat = "mean", ndraws = 1000)
-
-# Check mean AND sd jointly
-pp_check(mod_complexity_size, type = "stat_2d", ndraws = 1000)
-
-# Check for outliers / tail behaviour
-pp_check(mod_complexity_size, type = "scatter_avg")
-
-
-
-# mod_no_region6 <- brm(
-#   height_ratio ~ complexity,
-#   family = gaussian(),
-#   prior = c(prior(normal(0, 0.5), class = b),
-#             prior(normal(0, 0.5), class = Intercept),
-#             prior(exponential(1), class = sigma)),
-#   data = pred_resp_dimorphism,
-#   cores = 4, iter = 4000, seed = 42
-# )
-# 
-# loo_region6    <- loo(mod_complexity_size)
-# loo_no_region6 <- loo(mod_no_region6)
-# 
-# loo_compare(loo_region6, loo_no_region6)
-# The LOO favors mod_no_region6 marginally, but the difference (−1.0 ± 0.8) is well within 1 SE — so the models are indistinguishable predictively.
-
-
-
-# Model mediation ####
-
-pred_resp_dimorphism %>% 
-  select(complexity, height_ratio) %>% 
-  na.omit() %>% 
-  dim()
-
-run_model <- F
-
-if (run_model == T){
-  mod_mediation <- brm(
-    bf(height_ratio ~ Ax1 + complexity + (1 | region6)) +
-      bf(Ax1 ~ complexity + herding_importance + mo(matri_cat) + hunting) +
-      set_rescor(FALSE),
-    family = gaussian(),
-    prior = c(
-      # height_ratio equation
-      prior(normal(0, 0.5), class = b, resp = heightratio),
-      prior(normal(0, 0.5), class = Intercept, resp = heightratio),
-      prior(exponential(1), class = sigma, resp = heightratio),
-      prior(exponential(1), class = sd, resp = heightratio),
-      # Ax1 equation
-      prior(normal(0, 0.5), class = b, resp = Ax1),
-      prior(normal(0, 0.5), class = Intercept, resp = Ax1),
-      prior(exponential(1), class = sigma, resp = Ax1)
-    ),
-    data = pred_resp_dimorphism,  # needs all variables in one dataframe
-    cores = 4, iter = 4000, seed = 42,
-    control = list(adapt_delta = 0.99)
-  )
-  saveRDS(mod_mediation, here::here("output/2026-03-19_whyte_mod_mediation.rds"))
-}
-
-
-mod_mediation <- readRDS(here::here("output/2026-03-19_whyte_mod_mediation.rds"))
-
-summary(mod_mediation)
-post <- as_draws_df(mod_mediation) # these are the posterior distributions
-
-# indirect effect = a path × b path
-post$indirect <- post$b_heightratio_Ax1 * post$b_Ax1_complexity
-
-# direct effect
-post$direct <- post$b_heightratio_complexity
-
-# total effect
-post$total <- post$indirect + post$direct
-
-# summarise: Bayesian credible interval (CI) table
-posterior::summarise_draws(post[, c("indirect", "direct", "total")],
-                           mean, sd, ~quantile(.x, probs = c(0.025, 0.975)))
 
 
 
@@ -447,20 +314,36 @@ lookup_matched |> count(soc_id) |> filter(n > 1)
 
 ## Prune the tree to my sample ####
 
-coords_matched <- coords_extended %>%
+### 86 societies analysed ####
+coords_matched_86 <- coords_extended %>%
   left_join(lookup_matched, by = "soc_id") %>% 
-  filter(!is.na(height_ratio))
+  mutate(phylo = case_when(phylo == "Kazakh" ~ "Kazak",
+                           phylo == "Omaha" ~ "MISSING_Omaha",
+                           phylo == "Twana" ~ "MISSING_Twana",
+                           TRUE ~ phylo))
 
 # check for anything that didn't match before pruning
-coords_matched %>% filter(is.na(phylo)) %>% select(soc_id, pref_name_for_society)
+coords_matched_86 %>% filter(is.na(phylo)) %>% select(soc_id, pref_name_for_society)
 
 # prune the tree to just your sample (plain ape, no glottoTrees needed --
 # this tree is already society-level, not language-classification-level)
-my_tree <- ape::keep.tip(minocher_tree, tip = coords_matched$phylo)
+tree_86 <- ape::keep.tip(minocher_tree, tip = coords_matched$phylo)
 
 
-png("draft/fig/tree_plot.png", width = 20, height = 25, units = "cm", res = 300)
-plot.phylo(my_tree)
+png("draft/fig/tree_plot_full.png", width = 20, height = 50, units = "cm", res = 300)
+plot.phylo(tree_86)
+dev.off()
+
+### 46 societies with size data ####
+
+coords_matched_46 <- coords_matched_86 %>% 
+  filter(!is.na(height_ratio))
+
+tree_46 <- ape::keep.tip(minocher_tree, tip = coords_matched_size$phylo)
+
+
+png("draft/fig/tree_plot_size_data.png", width = 20, height = 25, units = "cm", res = 300)
+plot.phylo(tree_46)
 dev.off()
 
 
@@ -469,17 +352,16 @@ dev.off()
 library(ape)
 library(brms)
 
-tree <- my_tree
-dat  <- coords_matched
 # rescale the variables
-dat <- dat |> mutate(
+coords_matched_46 <- coords_matched_46 |> mutate(
   height_z = as.numeric(scale(height_ratio)),
   Ax1_z    = as.numeric(scale(Ax1))
 )
 # refit with height_z ~ Ax1_z + (1 | gr(phylo, cov = A)) + (1 | region6)
 
 # 2. Phylogenetic correlation matrix
-A <- ape::vcv(tree, corr = TRUE) # covariance matrix of societies
+
+A <- ape::vcv(tree_46, corr = TRUE) # covariance matrix of societies
 A <- A[dat$phylo, dat$phylo]      # not required, but confirms names line up
 stopifnot(all(dat$phylo %in% rownames(A)))
 
@@ -488,7 +370,7 @@ run_models <- F
 if (run_models){
   mod_domination_phylo <- brm(
     height_z ~ Ax1_z + (1 | gr(phylo, cov = A)),
-    data  = dat,
+    data  = coords_matched_46,
     data2 = list(A = A),
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
@@ -580,6 +462,7 @@ haversine_dist_matrix <- function(lonlat, R = 6371) {
 }
 
 
+
 stopifnot(!anyNA(coords_extended$Long), !anyNA(coords_extended$Lat))
 
 coords_extended_nogap <- coords_extended %>% filter(!is.na(height_ratio))
@@ -587,24 +470,38 @@ n   <- nrow(coords_extended_nogap)
 ids <- coords_extended_nogap$soc_id
 
 # SPATIAL matrix
-coords_mat <- as.matrix(coords_extended_nogap[, c("Long", "Lat")])
-D_sp <- haversine_dist_matrix(coords_mat)   # km
-dimnames(D_sp) <- list(ids, ids)
 
-# 1a. Row-standardized inverse-distance weights (for LAG covariates, step 4)
-W_sp <- 1 / (D_sp + 1)     # +1km guards the diagonal before we zero it
-diag(W_sp) <- 0
-W_sp <- W_sp / rowSums(W_sp)   # rows sum to 1
+compute_spatial_weight_matrix <- function(coords){
+  coords_mat <- as.matrix(coords[, c("Long", "Lat")])
+  D_sp <- haversine_dist_matrix(coords_mat)   # km
+  dimnames(D_sp) <- list(coords$soc_id, coords$soc_id)
 
-# 1b. Exponential-decay CORRELATION matrix (for the brms gr(cov=) approach, step 5)
-# phi = distance scale over which similarity decays. Median pairwise
-# distance is a reasonable data-driven default -- try a couple of
-# alternatives (e.g. 1000km, or the 25th percentile) as a sensitivity check.
-phi_sp <- median(D_sp[upper.tri(D_sp)])
-A_sp <- exp(-D_sp / phi_sp)
-diag(A_sp) <- 1
-A_sp <- as.matrix(Matrix::nearPD(A_sp, corr = TRUE)$mat)  # force valid PD correlation matrix
-dimnames(A_sp) <- list(ids, ids)
+  # 1a. Row-standardized inverse-distance weights (for LAG covariates, step 4)
+  W_sp <- 1 / (D_sp + 1)     # +1km guards the diagonal before we zero it
+  diag(W_sp) <- 0
+  W_sp <- W_sp / rowSums(W_sp)   # rows sum to 1
+  return(W_sp)
+}
+
+compute_residual_correlation_matrix <- function(coords){
+  coords_mat <- as.matrix(coords[, c("Long", "Lat")])
+  D_sp <- haversine_dist_matrix(coords_mat)   # km
+  dimnames(D_sp) <- list(ids, ids)
+  
+  # 1b. Exponential-decay CORRELATION matrix (for the brms gr(cov=) approach)
+  # = IF I WANTED TO GO FURTHER, but no need (no significance)
+  # phi = distance scale over which similarity decays. Median pairwise
+  # distance is a reasonable data-driven default -- try a couple of
+  # alternatives (e.g. 1000km, or the 25th percentile) as a sensitivity check.
+  phi_sp <- median(D_sp[upper.tri(D_sp)])
+  A_sp <- exp(-D_sp / phi_sp)
+  diag(A_sp) <- 1
+  A_sp <- as.matrix(Matrix::nearPD(A_sp, corr = TRUE)$mat)  # force valid PD correlation matrix
+  dimnames(A_sp) <- list(ids, ids)
+}
+
+
+Wsp <- compute_spatial_weight_matrix(coords_extended_nogap)
 
 resid_vec <- residuals(mod_domination_phylo)[, "Estimate"]
 ape::Moran.I(resid_vec, W_sp)     # spatial autocorrelation in residuals
@@ -612,6 +509,10 @@ ape::Moran.I(resid_vec, W_sp)     # spatial autocorrelation in residuals
 ## Plot ####
 
 ### Annotation ####
+
+# Constants used when standardizing (compute from the same data the model was fit on)
+mx <- mean(dat$Ax1);           sx <- sd(dat$Ax1)
+my <- mean(dat$height_ratio);  sy <- sd(dat$height_ratio)
 
 post <- as_draws_df(mod_domination_phylo)
 
@@ -643,9 +544,6 @@ label_text <- paste0(
 
 ### Plot ####
 
-# Constants used when standardizing (compute from the same data the model was fit on)
-mx <- mean(dat$Ax1);           sx <- sd(dat$Ax1)
-my <- mean(dat$height_ratio);  sy <- sd(dat$height_ratio)
 
 # Prediction grid on the ORIGINAL Ax1 scale, converted to z for the model
 grid <- tibble(Ax1 = seq(min(dat$Ax1), max(dat$Ax1), length.out = 100)) |>

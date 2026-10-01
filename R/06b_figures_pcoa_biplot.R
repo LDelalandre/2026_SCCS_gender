@@ -82,7 +82,6 @@ world_map <- map_data("world")
 
 # Create the map
 map_societies <- ggplot() +
-  # Draw world map base
   geom_polygon(
     data = world_map,
     aes(x = long, y = lat, group = group),
@@ -90,43 +89,62 @@ map_societies <- ggplot() +
     color = "white",
     linewidth = 0.2
   ) +
-  # Add society points
   geom_point(
     data = coords_df,
-    aes(x = origLong, y = origLat, , color = region6), #
+    aes(
+      x = origLong,
+      y = origLat,
+      color = region6
+    ),
     size = 0.8,
     alpha = 0.8
   ) +
-  # Add society labels
-  geom_text(
+  ggrepel::geom_text_repel(
     data = coords_df,
-    aes(x = origLong, y = origLat, label = pref_name_for_society), #, color = region
+    aes(
+      x = origLong,
+      y = origLat,
+      label = pref_name_for_society
+    ),
     size = 2,
-    vjust = -0.8,
-    hjust = 0.5,
-    check_overlap = TRUE
+    seed = 123,
+    direction = "both",
+    box.padding = 0.4,
+    point.padding = 0.2,
+    force = 2,
+    force_pull = 0.3,
+    min.segment.length = 0,
+    max.overlaps = Inf,
+    segment.color = "grey40",
+    segment.size = 0.2,
+    segment.alpha = 0.7,
+    show.legend = FALSE
   ) +
-  # Coordinate system
-  coord_fixed(1.3, xlim = c(-180, 180), ylim = c(-90, 90)) +
-  # Theme and labels
+  coord_fixed(
+    ratio = 1.3,
+    xlim = c(-180, 180),
+    ylim = c(-50, 80),
+    clip = "on"
+  ) +
   theme_minimal() +
   theme(
     panel.background = element_rect(fill = "aliceblue", color = NA),
     panel.grid = element_line(color = "white", linewidth = 0.3),
     legend.position = "bottom",
-    # legend.title = element_text(face = "bold"),
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    plot.margin = margin(10, 30, 10, 30)
   ) +
   labs(
     title = "World Map of Societies",
     x = "Longitude",
     y = "Latitude",
     color = "Region"
-  )
+  ) 
+  
 
 map_societies
 
-ggsave("draft/fig/map-societies.png", map_societies, width = 18, height = 14, units = "cm")
+ggsave("draft/fig/map-societies.png", map_societies, width = 25, height = 20, units = "cm")
 
 
 

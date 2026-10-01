@@ -34,5 +34,4 @@ cor_table %>%
 
 
 
-# 3. Models ####
 

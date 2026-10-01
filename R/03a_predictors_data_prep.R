@@ -43,3 +43,47 @@ predictors_detailed <- predictors %>%
   filter(!var_id %in% c("SCCS729")) # fishing, also remove, I just want a simple hunting-gathering variable
 
 write.csv(predictors_detailed, here::here("output/predictors_detailed.csv"), row.names = F) 
+
+
+
+# Recode predictors ####
+
+predictors_detailed <- read.csv("output/predictors_detailed.csv")
+
+predictors_data <- sccs %>% 
+  filter(var_id %in% predictors_detailed$var_id) 
+
+
+# For these five variables, I reverse the coding order, i.e., if variables
+# is coded from 1 to 3, 1 becomes 3, 2 becomes 2, and 3 becomes 1.
+
+vars_to_recode <- gender_response_recode %>%
+  select(var_id, title, women_favorable) %>% 
+  filter(women_favorable == -1)
+
+whyte_codes_corrected <- whyte_codes %>% 
+  filter(var_id %in% vars_to_recode$var_id) %>% 
+  mutate(max_value = max(code, na.rm = T)) %>% 
+  mutate(code = max_value + 1 - code) %>% 
+  select(-max_value) %>% 
+  select(-category)
+
+codes <- codes_raw %>% 
+  filter(!var_id %in% vars_to_recode$var_id) %>% 
+  rbind(whyte_codes_corrected)
+
+sccs_recoded_vars <- sccs_raw %>% 
+  filter(var_id %in% vars_to_recode$var_id) %>% 
+  group_by (var_id) %>% 
+  mutate(max_value = max(code, na.rm = T)) %>% 
+  mutate(code = max_value + 1 - code) %>% 
+  select(-max_value)
+
+sccs <- sccs_raw %>% 
+  filter(!var_id %in% vars_to_recode$var_id) %>% 
+  rbind(sccs_recoded_vars)
+
+whyte_data <- sccs %>% 
+  filter(var_id %in% whyte_vars$var_id) %>% 
+  group_by(soc_id, var_id) %>%
+  ungroup()

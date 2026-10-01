@@ -1,6 +1,5 @@
 source("R/functions.R")
 
-
 library(cluster)    # for daisy/Gower
 library(ape)        # for pcoa
 library(vegan) # for robustness
@@ -13,24 +12,14 @@ whyte_vars_to_remove <- c("DV34") # (matri)locality
 
 whyte_vars <- gender_response_recode %>% 
   filter(column_number_whyte78 %in% rep(1:52)) %>% 
-  select(var_id, title,var_id_whyte, column_number_whyte78, category1, category2, domain, domain_name, title_shortened) %>%
-  mutate(short_title = paste0(var_id, "_", str_trunc(title, width = 30, ellipsis = "..."))) %>% #TODO: remove (keep manual short_title)
+  select(var_id, title,var_id_whyte, column_number_whyte78, domain, domain_name, title_shortened) %>%
   mutate(title = if_else(var_id == "SCCS625", paste("(No)", title), title)) %>%  # high = no high value on men being agressive
   filter(!var_id_whyte %in% whyte_vars_to_remove) # Remove locality
 
 # Categories of variables
-
-#TODO: simplify the input
 whyte_category <- whyte_vars %>% 
-  arrange(category1, category2) %>% 
-  select(var_id, var_id_whyte, category1, category2, title, title_shortened) %>% 
-  mutate(category = 
-           case_when(category1 == "role" & category2 %in% c("rituals", "sexual") ~ "role_symbolic",
-                     category1 == "role" & category2 %in% c("subsistence", "warfare") ~ "role_material",
-                     category1 == "autonomy" & category2 == "sexual" ~ "sexual_autonomy",
-                     TRUE ~ category1)) %>% 
+  select(var_id, var_id_whyte, title, title_shortened) %>% 
   left_join(whyte_category_angarika)
-
 
 whyte_codes <- variables %>% 
   filter(title %in% whyte_vars$title) %>% 
@@ -44,7 +33,7 @@ whyte_codes <- variables %>%
 # For these five variables, I reverse the coding order, i.e., if variables
 # is coded from 1 to 3, 1 becomes 3, 2 becomes 2, and 3 becomes 1.
 
-vars_to_recode <- read.csv("data/gender_response_variables_recode.csv") %>%
+vars_to_recode <- gender_response_recode %>%
   select(var_id, title, women_favorable) %>% 
   filter(women_favorable == -1)
 
@@ -70,6 +59,11 @@ sccs <- sccs_raw %>%
   filter(!var_id %in% vars_to_recode$var_id) %>% 
   rbind(sccs_recoded_vars)
 
+whyte_data <- sccs %>% 
+  filter(var_id %in% whyte_vars$var_id) %>% 
+  group_by(soc_id, var_id) %>%
+  ungroup()
+
 
 ## Subsistence type of societies ####
 codes_SCCS820 <- codes %>% 
@@ -79,7 +73,7 @@ codes_SCCS820 <- codes %>%
   mutate(SCCS820 = as.factor(SCCS820))
 
 society_subsistence_type <- sccs %>% 
-  filter(soc_id %in% pred_resp$soc_id) %>% 
+  filter(soc_id %in% whyte_data$soc_id) %>% 
   filter(var_id %in% c("SCCS820", "SCCS833")) %>%
   select(soc_id, var_id, code) %>% 
   pivot_wider(names_from = var_id, values_from = code) %>% 
@@ -93,17 +87,6 @@ society_subsistence_type %>%
   group_by(SCCS820) %>% 
   summarize(n = n())
 
-
-
-## Build a matrix ####
-whyte_data <- sccs %>% 
-  filter(var_id %in% whyte_vars$var_id) %>% 
-  # If multiple sub_cases per society/variable, take one (e.g. most recent)
-  group_by(soc_id, var_id) %>%
-  slice_max(year, na_rm = TRUE, n = 1) %>%
-  ungroup()
-
-
 # Subset on the agricultural societies only (OPTIONAL)
 subset_agri <- F
 if (subset_agri){
@@ -116,6 +99,7 @@ if (subset_agri){
 }
 
   
+## Build a matrix ####
 whyte_data_wide <- whyte_data %>%
   dplyr::select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code) %>% 
@@ -166,7 +150,6 @@ data.frame(
 
 
 ## Prepare ordinal and binary variables ####
-
 
 # Tell daisy which variables are ordinal and which are binary
 

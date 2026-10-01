@@ -21,7 +21,7 @@ var_loadings <- cor(
 ) %>%
   as.data.frame() %>%
   rownames_to_column("var_id") %>%
-  left_join(whyte_category %>% select(var_id, var_id_whyte, title, title_shortened, category),
+  left_join(whyte_category %>% select(var_id, var_id_whyte, title, title_shortened, category_Angarika),
             by = "var_id")
 
 
@@ -31,9 +31,7 @@ var_loadings <- cor(
 #   mutate(across(starts_with("Axis."), ~ . * women_favorable))
 
 var_order <- var_loadings %>%
-  left_join(whyte_vars %>% select(var_id_whyte, category2),
-            by = "var_id_whyte") %>%
-  arrange(desc(category), category2, title_shortened) %>%
+  arrange(desc(category_Angarika), title_shortened) %>%
   pull(title_shortened) %>%
   unique()
 
@@ -96,7 +94,7 @@ category_colors <- c(
 
 # Step 1: build vars_plot with category_Angarika-based ordering
 vars_plot <- var_loadings %>%
-  left_join(whyte_vars %>% select(var_id_whyte, category2), by = "var_id_whyte") %>%
+  # left_join(whyte_vars %>% select(var_id_whyte, category2), by = "var_id_whyte") %>%
   left_join(whyte_category_angarika %>% select(var_id_whyte, category_Angarika)) %>%
   pivot_longer(cols = c(Axis.1, Axis.2, Axis.3, Axis.4, Axis.5),
                names_to = "axis", values_to = "loading") %>%
@@ -195,7 +193,7 @@ make_loading_plot <- function(axes = c("Axis.1", "Axis.2", "Axis.3",
 }
 
 # Axis 1 only
-loadings_plot <- make_loading_plot("Axis.1", significance = TRUE)
+loadings_plot <- make_loading_plot("Axis.1", significance = T)
 loadings_plot[[1]] %>% plot
 loadings_plot[[2]]
 loadings_plot_legend <- cowplot::plot_grid(loadings_plot[[1]], loadings_plot[[2]], rel_widths = c(0.4, 1))

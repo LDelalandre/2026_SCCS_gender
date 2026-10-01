@@ -10,9 +10,9 @@ source(here::here("R/03a_predictors_data_prep.R"))
 source(here::here("R/03b_predictors_pcoa.R"))
 source(here::here("R/03c_predictors_technology.R"))
 
-# source(here::here("R/03e_predictors_models.R"))
+source(here::here("R/04a_dimorphism.R"))
 
-source(here::here("R/04_dimorphism.R"))
+# source(here::here("R/04b_predictors_models.R"))
 
 source(here::here("R/05_descriptive_tables.R"))
 

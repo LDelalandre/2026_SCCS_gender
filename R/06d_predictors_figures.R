@@ -7,7 +7,7 @@ m_axis1 <- readRDS(here::here("output/models/m_axis1"))
 
 # 1. POSTERIOR DISTRIBUTIONS
 
-plot_mod_axis1 <- m_axis1 %>%
+plot_mod_axis1 <- mod_axis1_phylo %>%
   gather_draws(b_complexity, bsp_momatri_cat) %>%
   mutate(.variable = recode(.variable,
                             b_complexity      = "Complexity",
@@ -27,12 +27,12 @@ ggsave("draft/fig/plot_mod_axis1.png", plot_mod_axis1)
 
 # 3. POSTERIOR PREDICTIVE CHECK
 # does the model reproduce the distribution of Axis.1?
-brms::pp_check(m_axis1, ndraws = 100) +
+brms::pp_check(mod_axis1_phylo, ndraws = 100) +
   labs(title = "Posterior predictive check — Axis 1") +
   theme_minimal(base_size = 13)
 
 # 4. R²
-brms::bayes_R2(m_axis1)
+brms::bayes_R2(mod_axis1_phylo)
 
 
 
@@ -61,7 +61,7 @@ complexity_grid <- tibble(
 )
 
 pred_complexity <- complexity_grid %>%
-  add_epred_draws(m_axis1, ndraws = 500) %>%
+  add_epred_draws(mod_axis1_phylo, ndraws = 500) %>%
   group_by(complexity) %>%
   summarise(
     mean  = mean(.epred),

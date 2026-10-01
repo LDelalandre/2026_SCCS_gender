@@ -18,7 +18,8 @@ gleeson <- read.csv(here::here("data/gleesonFemaleStatusFood2018.csv")) %>%  # h
   mutate(society_name = str_replace(society_name, "\\*", ""))
 
 gender_response <- read.csv(here::here("data/gender_response_variables.csv"))
-gender_response_recode <- read.csv(here::here("data/gender_response_variables_recode.csv")) # for each var, high value = high status of women
+gender_response_recode <- read.csv(here::here("data/gender_response_variables_recode.csv")) 
+# info needed to recode 6 variables, so that, for each var, high value = high status of women
 
 whyte_category_angarika <- read.csv(here::here("data/gender_response_variables_recode_angarika.csv")) %>%
   select(var_id, var_id_whyte, title, title_shortened, category_whyte, category_Angarika)

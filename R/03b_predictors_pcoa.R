@@ -2,11 +2,7 @@
 
 ## Coverage ####
 
-predictors_detailed <- read.csv("output/predictors_detailed.csv")
 
-
-predictors_data <- sccs %>% 
-  filter(var_id %in% predictors_detailed$var_id) 
 # Warfare: remove the unresolved rating, and unclear
   # mutate(code = case_when (var_id %in% c("SCCS1649", "SCCS1650") & code == 0 ~ NA,
   #                          var_id %in% c("SCCS1649", "SCCS1650") & code == 88 ~ NA,
@@ -48,7 +44,7 @@ run_category_pcoa <- function(var_ids, label) {
   
   mat <- predictors_wide[, var_ids, drop = FALSE]
   
-  # drop variables that are entirely NA
+  # drop variables that are more than 50% NA
   mat <- mat[, colSums(!is.na(mat)) > nrow(mat) * 0.5]
   
   if(ncol(mat) < 2) {
@@ -185,7 +181,6 @@ pred_loadings <- names(cat_results) %>%
 
 # Extract predictors per category ####
 
-
 complexity <- cat_results[["complexity"]]$pcoa$vectors %>%
   as.data.frame() %>%
   dplyr::select(complexity = Axis.1) %>% # positive = complex
@@ -245,7 +240,5 @@ pred_resp <- all_axes %>%
   ) %>% ordered(levels = c("non_matri", "intermediate", "matri"))) %>% 
   filter(!is.na(complexity)) %>% 
   mutate(hunting = max(hunting) + 1 - hunting) # RECODE HUNTING
-
-
 
 
