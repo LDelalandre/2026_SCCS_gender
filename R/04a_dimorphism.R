@@ -327,10 +327,10 @@ coords_matched_86 %>% filter(is.na(phylo)) %>% select(soc_id, pref_name_for_soci
 
 # prune the tree to just your sample (plain ape, no glottoTrees needed --
 # this tree is already society-level, not language-classification-level)
-tree_86 <- ape::keep.tip(minocher_tree, tip = coords_matched$phylo)
+tree_86 <- ape::keep.tip(minocher_tree, tip = coords_matched_86$phylo)
 
 
-png("draft/fig/tree_plot_full.png", width = 20, height = 50, units = "cm", res = 300)
+png("draft/fig/tree_plot_full.png", width = 35, height = 50, units = "cm", res = 300)
 plot.phylo(tree_86)
 dev.off()
 
@@ -339,7 +339,7 @@ dev.off()
 coords_matched_46 <- coords_matched_86 %>% 
   filter(!is.na(height_ratio))
 
-tree_46 <- ape::keep.tip(minocher_tree, tip = coords_matched_size$phylo)
+tree_46 <- ape::keep.tip(minocher_tree, tip = coords_matched_46$phylo)
 
 
 png("draft/fig/tree_plot_size_data.png", width = 20, height = 25, units = "cm", res = 300)
@@ -362,8 +362,8 @@ coords_matched_46 <- coords_matched_46 |> mutate(
 # 2. Phylogenetic correlation matrix
 
 A <- ape::vcv(tree_46, corr = TRUE) # covariance matrix of societies
-A <- A[dat$phylo, dat$phylo]      # not required, but confirms names line up
-stopifnot(all(dat$phylo %in% rownames(A)))
+A <- A[coords_matched_46$phylo, coords_matched_46$phylo]      # not required, but confirms names line up
+stopifnot(all(coords_matched_46$phylo %in% rownames(A)))
 
 # 3. Model
 run_models <- F
@@ -383,7 +383,7 @@ if (run_models){
   
   mod_domination_nophylo <- brm(
     height_z ~ Ax1_z ,
-    data  = dat,
+    data  = coords_matched_46,
     family = gaussian(),
     prior = c(prior(normal(0, 0.5), class = b),
               prior(normal(0, 0.5), class = Intercept),
@@ -504,15 +504,15 @@ compute_residual_correlation_matrix <- function(coords){
 Wsp <- compute_spatial_weight_matrix(coords_extended_nogap)
 
 resid_vec <- residuals(mod_domination_phylo)[, "Estimate"]
-ape::Moran.I(resid_vec, W_sp)     # spatial autocorrelation in residuals
+ape::Moran.I(resid_vec, Wsp)     # spatial autocorrelation in residuals
 
 ## Plot ####
 
 ### Annotation ####
 
 # Constants used when standardizing (compute from the same data the model was fit on)
-mx <- mean(dat$Ax1);           sx <- sd(dat$Ax1)
-my <- mean(dat$height_ratio);  sy <- sd(dat$height_ratio)
+mx <- mean(coords_matched_46$Ax1);           sx <- sd(coords_matched_46$Ax1)
+my <- mean(coords_matched_46$height_ratio);  sy <- sd(coords_matched_46$height_ratio)
 
 post <- as_draws_df(mod_domination_phylo)
 
@@ -530,7 +530,7 @@ lambda_draws <- post$sd_phylo__Intercept^2 /
   (post$sd_phylo__Intercept^2 + post$sigma^2)
 lam_q <- quantile(lambda_draws, c(0.5, 0.025, 0.975))
 
-n <- nrow(dat)   # the 46 societies actually in the model
+n <- nrow(coords_matched_46)   # the 46 societies actually in the model
 
 fmt <- function(q, d) sprintf(paste0("%.", d, "f [%.", d, "f, %.", d, "f]"), q[1], q[2], q[3])
 
@@ -546,7 +546,7 @@ label_text <- paste0(
 
 
 # Prediction grid on the ORIGINAL Ax1 scale, converted to z for the model
-grid <- tibble(Ax1 = seq(min(dat$Ax1), max(dat$Ax1), length.out = 100)) |>
+grid <- tibble(Ax1 = seq(min(coords_matched_46$Ax1), max(coords_matched_46$Ax1), length.out = 100)) |>
   mutate(Ax1_z = (Ax1 - mx) / sx)
 
 pred <- grid |>
@@ -555,11 +555,11 @@ pred <- grid |>
 
 biplot_dimorphism_phylo <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
   tidybayes::stat_lineribbon(.width = c(0.5, 0.95), alpha = 0.3, fill = "steelblue") +
-  geom_point(data = dat, aes(y = height_ratio)) +
+  geom_point(data = coords_matched_46, aes(y = height_ratio)) +
   annotate("text",
-           x = min(dat$Ax1), y = max(dat$height_ratio),
+           x = min(coords_matched_46$Ax1), y = max(coords_matched_46$height_ratio),
            label = label_text, hjust = 0, vjust = 1, size = 3.2, family = "mono") +
-  labs(x = "Axis 1", y = "Height ratio") +
+  labs(x = "Women's Status Index", y = "Height ratio (women over men)") +
   theme_classic()
 
 ggsave("draft/fig/biplot_dimorphism_phylo.png", biplot_dimorphism_phylo)

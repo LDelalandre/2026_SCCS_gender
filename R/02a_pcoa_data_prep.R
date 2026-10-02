@@ -30,7 +30,7 @@ whyte_codes <- variables %>%
 
 ## Recode six variables ####
 
-# For these five variables, I reverse the coding order, i.e., if variables
+# For these variables, I reverse the coding order, i.e., if variables
 # is coded from 1 to 3, 1 becomes 3, 2 becomes 2, and 3 becomes 1.
 
 vars_to_recode <- gender_response_recode %>%
@@ -39,6 +39,7 @@ vars_to_recode <- gender_response_recode %>%
 
 whyte_codes_corrected <- whyte_codes %>% 
   filter(var_id %in% vars_to_recode$var_id) %>% 
+  group_by(var_id) %>% 
   mutate(max_value = max(code, na.rm = T)) %>% 
   mutate(code = max_value + 1 - code) %>% 
   select(-max_value) %>% 

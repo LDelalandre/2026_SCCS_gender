@@ -47,5 +47,13 @@ coords_df <- coords_df %>%
               select(soc_id, region6), 
             by = "soc_id")
 
+# Avoid changes in the direction of Ax1.
+ref_sample <- coords_df %>% 
+  filter(pref_name_for_society == "Twana")
+
+if (ref_sample$Ax1 < 0) {
+  coords_df[, "Ax1"] <- -coords_df[, "Ax1"]
+}
+
 # Check the distribution
 table(coords_df$region6)

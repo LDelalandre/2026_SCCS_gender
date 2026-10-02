@@ -413,6 +413,52 @@ table_technology <- mod_technology %>%
 save_as_docx(table_technology, path ="draft/tbl/table_technology.docx")
 
 
+## One PCOA ####
+
+### Loadings ####
+
+table_loading_one_pcoa <- loadings_all_predictors %>% 
+  mutate_at(vars(pred1, pred2, pred3, pred4), funs(round(., 2))) %>% 
+  arrange(pred1) %>% 
+  flextable() %>% 
+  set_header_labels(
+    var_id = "Variable ID",
+    title = "Variable",
+    pred1 = "Axis 1",
+    pred2 = "Axis 2",
+    pred3 = "Axis 3",
+    pred4 = "Axis 4") %>% 
+  width(j = 2, width = 3, "cm") %>% 
+  width(j = 2, width = 7, "cm") %>% 
+  set_caption("Table S7: Covariation of the predictor variables with the first for axes
+              of the PCoA made on all predictor variables. Variables arranged by their correlation
+              with Axis 1, capturing nearly 40% of the variance (see Fig S9). 
+              The first dimension captures variables linked to social complexity. 
+              The second relates to the frequency of intercommunity armed conflicts, 
+              the third to matrilocality/lineality, 
+              and the fourth separates societies based on the type of agriculture they rely on
+              (cereals vs. root, tubers, and tree fruits). ")
+
+
+### Model ####
+
+table_lm_one_pcoa_clean <- table_lm_one_pcoa %>% 
+  flextable() %>% 
+  width(j = 1, width = 4, "cm") %>% 
+  width(j = 2, width = 4, "cm") %>% 
+  set_header_labels(
+    Variable = "Axis of PCoA on predictor variables",
+    `HR [CI]` = "Coefficient [95% confidence interval]",
+    p = "p-value"
+  ) %>% 
+  set_caption("Table S8: summary table of a frequentist model predicting Women's Status Index
+  by the firt four axes of the PCoA made on all the predictor variables (pred1 to pred4).
+  pred1 captures social complexity, pred2 the frequency of intercommunity armed conflict,
+  pred3 matrilineality/locality, and pred4 the type of agriculture (see Table S7).
+  Consistently with the main analysis presented in the article, complexity and matrilineality/locality 
+  appeared to be the two significant predictors of women's status.")
+
+
 # Save all ####
 
 save_as_docx(
@@ -423,7 +469,10 @@ save_as_docx(
   table_pred_correlations,
   table_cor_pred_axes,
   
-  table_technology,
+  table_loading_one_pcoa,
+  table_lm_one_pcoa_clean,
+  
+  # table_technology,
   
   pr_section = officer::prop_section(
     page_size = officer::page_size(orient = "portrait")

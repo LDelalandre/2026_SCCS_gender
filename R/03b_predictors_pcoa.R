@@ -238,7 +238,7 @@ pred_resp <- all_axes %>%
     matri < 0.5    ~ "intermediate",
     matri >= 0.5   ~ "matri"
   ) %>% ordered(levels = c("non_matri", "intermediate", "matri"))) %>% 
-  filter(!is.na(complexity)) %>% 
-  mutate(hunting = max(hunting) + 1 - hunting) # RECODE HUNTING
+  filter(!is.na(complexity))
+  # mutate(hunting = max(hunting) + 1 - hunting) # RECODE HUNTING ALREADY RECODED!
 
 

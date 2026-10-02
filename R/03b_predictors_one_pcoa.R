@@ -64,7 +64,7 @@ df <- data.frame(
   var_exp = pcoa_all_pred$var_exp
 )
 
-ggplot(df, aes(x = axis, y = var_exp)) +
+plot_pred_1_pcoa <- ggplot(df, aes(x = axis, y = var_exp)) +
   geom_line(color = "grey50") +
   geom_point(size = 2.5, color = "#2166ac") +
   geom_hline(yintercept = 0.1, linetype = "dashed", 
@@ -76,6 +76,7 @@ ggplot(df, aes(x = axis, y = var_exp)) +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(face = "bold"))
 
+ggsave("draft/fig/plot_pred_1_pcoa.png", plot_pred_1_pcoa)
 
 naxes <- 4
 soc_ids    <- rownames(pcoa_all_pred$pcoa$vectors)
@@ -120,5 +121,7 @@ pred_resp_one_pcoa <-
 
 mod <- lm(Ax1 ~ pred1 + pred2 + pred3 + pred4, data = pred_resp_one_pcoa)
 summary(mod)
+anova(mod)
 
-
+library("utile.tables")
+table_lm_one_pcoa <- build_table(mod)
