@@ -27,18 +27,23 @@ societies_mapping_parsed <- societies_mapping %>%
   select(soc_id, soc_id_ea) %>% 
   unique()
 
-
 ea_vars_of_interest <- c("EA078", "EA043", "EA011",
                          # "EA044", "EA045", "EA046", "EA047", "EA048", "EA049",
-                         "EA050", "EA051", "EA052", "EA053", "EA054"
+                         
+                         # labor division
+                         "EA050", "EA051", "EA052", "EA053",
+                         "EA054"
+                         
                          # "EA006", # removed: dowry vs. bride price, did not at all on Whyte data's axis 1.
-                         # "EAOO8", # Domestic organization 
+                         # "EAOO8", # Domestic organization (polygyny, etc.)
                          # "EA015", # Community marriage organization
                          # "EAO17" # Largest patrilineal kin group
                          )
 variable_definitions <- variables_ea %>% 
   filter(var_id_ea %in% ea_vars_of_interest) %>% 
   select(var_id_ea, title)
+
+variable_definitions
 
 ea_subset_fvar <- ea %>%
   filter(var_id_ea %in% ea_vars_of_interest) %>%
@@ -180,32 +185,7 @@ societies_mapping_parsed %>% count(soc_id) %>% filter(n > 1)
 
 
 ## plot ####
-
-all_loadings <- bind_rows(
-  ea_loadings %>% mutate(source = "SCCS"),
-  ea_loadings_plot
-)
-
-# -- plot
-all_loadings %>%
-  filter(pco %in% c("PCo1", "PCo2")) %>%
-  select(var_id_ea, source, pco, loading) %>%
-  pivot_wider(names_from = pco, values_from = loading) %>%
-  ggplot(aes(x = PCo1, y = PCo2,
-             color = source,
-             label = var_id_ea)) +
-  geom_segment(aes(xend = 0, yend = 0),
-               arrow     = arrow(length = unit(0.2, "cm"), ends = "first"),
-               linewidth = 0.8) +
-  geom_point(size = 2.5) +
-  ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
-  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
-  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
-  scale_color_brewer(palette = "Set2", name = "Source") +
-  theme_bw(base_size = 10) +
-  labs(x     = "PCo1 (formal domination)",
-       y     = "PCo2 (work segregation)",
-       title = "EA variables projected on SCCS PCoA axes")
+# the variables on the original SCCS pcoa
 
 
 variable_definitions
@@ -319,20 +299,46 @@ scree_plot
 
 ### Variables ####
 
-loadings <- as.data.frame(cor(mat_ea_filtered, scores[, 1:2], use = "pairwise.complete.obs"))
-loadings$Variable <- rownames(loadings)
+# -- plot
+loadings_12 <- ea_loadings %>%
+  filter(pco %in% c("PCo1", "PCo2")) %>%
+  select(var_id_ea, pco, loading) %>%
+  pivot_wider(
+    names_from = pco,
+    values_from = loading
+  )
 
-arrow_mult <- 0.8 * max(abs(scores[, 1:2]), na.rm = TRUE) / max(abs(loadings[, 1:2]), na.rm = TRUE)
-loadings$PCoA1 <- loadings$PCoA1 * arrow_mult
-loadings$PCoA2 <- loadings$PCoA2 * arrow_mult
+ggplot(loadings_12, aes(x = 0, y = 0)) +
+  geom_segment(
+    aes(xend = PCo1, yend = PCo2),
+    arrow = arrow(length = unit(0.2, "cm")),
+    color = "steelblue",
+    linewidth = 0.7
+  ) +
+  geom_text(
+    aes(
+      x = PCo1,
+      y = PCo2,
+      label = var_id_ea
+    ),
+    color = "steelblue",
+    nudge_x = 0.01,
+    nudge_y = 0.01,
+    size = 3
+  ) +
+  geom_hline(yintercept = 0, color = "grey75") +
+  geom_vline(xintercept = 0, color = "grey75") +
+  coord_equal() +
+  labs(
+    x = "PCo1 loading",
+    y = "PCo2 loading",
+    title = "Variables on the first two PCo axes"
+  ) +
+  theme_minimal() 
 
-print(loadings)  # sanity check: are PCoA1/PCoA2 reasonable, non-NA numbers?
+variable_definitions
 
-ggplot(loadings) +
-  geom_segment(aes(x = 0, y = 0, xend = PCoA1, yend = PCoA2),
-               arrow = arrow(length = unit(0.2, "cm")), color = "red", linewidth = 1) +
-  geom_text(aes(PCoA1, PCoA2, label = Variable), color = "red") +
-  theme_bw()
+
 
 ## Correlation ####
 coords_df_merged <- coords_df_ea %>% 
@@ -340,12 +346,12 @@ coords_df_merged <- coords_df_ea %>%
   right_join(coords_df)
 
 coords_df_merged %>% 
-  ggplot(aes(x = Ax1_ea, y = Ax1)) +
+  ggplot(aes(x = Ax1, y = Ax1_ea)) +
   geom_point() +
   geom_smooth(method = "lm")
 
 cor.test(coords_df_merged$Ax1, coords_df_merged$Ax1_ea, use = "complete.obs")
-lm(Ax1 ~ Ax1_ea, data = coords_df_merged) %>% summary() 
+lm(Ax1_ea ~ Ax1, data = coords_df_merged) %>% summary() 
 # 20% of the variance of SCCS Axis1 is captured in EA. This is not much, but this gives an idea?
 
 coords_df_merged_height <- coords_df_merged %>%
@@ -361,13 +367,13 @@ coords_df_merged_height %>%
 lm(height_ratio ~ Ax1, data = coords_df_merged_height) %>% summary()
 lm(height_ratio ~ Ax1_ea, data = coords_df_merged_height) %>% summary()
 
-library(brms)
-bayes_ea <- brm(height_ratio ~ Ax1_ea, 
-                data = coords_df_merged_height,
-                family = gaussian(),
-                prior = c(prior(normal(0, 0.1), class = b)),
-                cores = 4)
-summary(bayes_ea)
+# library(brms)
+# bayes_ea <- brm(height_ratio ~ Ax1_ea, 
+#                 data = coords_df_merged_height,
+#                 family = gaussian(),
+#                 prior = c(prior(normal(0, 0.1), class = b)),
+#                 cores = 4)
+# summary(bayes_ea)
 
 
 

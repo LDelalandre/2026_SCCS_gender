@@ -94,7 +94,7 @@ table_resp <- whyte_category_angarika %>%
   we recoded the variables in 
   the opposite direction. This is indicated in the column `coding direction
   changed`. 
-  Finally, variable coverage provides the proportion of societies for which the variable was measured.
+  Finally, variable coverage provides the proportion of societies for which the variable was measured. 
   All variables are retrievable from D-PLACE
   (https://d-place.org/contributions/SCCS), using ID_SCCS.")
 
@@ -121,19 +121,27 @@ coord_societies <- coords_df %>%
   mutate(HRAF_link = utils::URLencode(HRAF_link, repeated = TRUE)) %>% # for URLs
   left_join(coords_matched_86 %>% select(soc_id, phylo))
 
+society_coverage_to_merge <- society_coverage %>% 
+  as.data.frame() %>% 
+  rownames_to_column("soc_id") %>% 
+  dplyr::rename("coverage" = ".") %>% 
+  mutate(coverage = round(coverage, digits = 2))
+
 table_societies<- coord_societies %>%
+  left_join(society_coverage_to_merge) %>% 
   flextable() %>%
   set_header_labels(
     pref_name_for_society = "Society",
     soc_id = "SCCS ID",
-    Ax1 = "Loading on PCoA Axis 1",
+    Ax1 = "Women's Status Index",
     main_focal_year = "Focal year",
-    region = "Region", 
+    region6 = "Region", 
     origLat = "Latitude",
     origLong = "Longitude",
     HRAF_name_ID = "HRAF name (ID)",
     HRAF_link = "HRAF URL",
-    phylo = "Society name in the phylogenetic tree"
+    phylo = "Society name in the phylogenetic tree",
+    coverage = "Coverage"
   ) %>%
   fontsize(size = 7) %>%
   fontsize(size = 8, part = "header") %>%
@@ -155,7 +163,14 @@ table_societies<- coord_societies %>%
       hyperlink_text(x = HRAF_link, url = HRAF_link)
     )
   ) %>% 
-  set_caption("Table S2: Societies analyzed in this study.")
+  set_caption("Table S2: Societies analyzed in this study. 
+              Societies are identified by their name and their ID in the SCCS, and ordered 
+              in ascending values of Women's Status Index (i.e., their position on PCoA axis 1). 
+              They are further attributed to Murdock's 6 world regions, and their coordinates are given. 
+              The correspondence is made with the online database HRAF. 
+              The name used in the phylogenetic tree is given. 
+              Finally, coverage (the proportion of women's status variables measured for a society) is given.
+              ")
 
 table_societies
 
@@ -330,7 +345,9 @@ cor_table_pred[lower.tri(cor_table_pred, diag = TRUE)] <- ""
 table_pred_correlations <- cor_table_pred %>% 
   rownames_to_column("Variable category") %>% 
   flextable() %>% 
-  set_caption("Table S4: Correlations among synthetic predictors.")
+  set_caption("Table S4: Correlations among synthetic predictors. 
+              Significance of Spearman correlation test: † p<0.10, * p<0.05, 
+              ** p<0.01, *** p<0.001).")
 
 
 save_as_docx(table_pred_correlations, path = "draft/tbl/table_pred_correlations.docx")
@@ -424,10 +441,10 @@ table_loading_one_pcoa <- loadings_all_predictors %>%
   set_header_labels(
     var_id = "Variable ID",
     title = "Variable",
-    pred1 = "Axis 1",
-    pred2 = "Axis 2",
-    pred3 = "Axis 3",
-    pred4 = "Axis 4") %>% 
+    pred1 = "Pred. axis 1",
+    pred2 = "Pred. axis 2",
+    pred3 = "Pred. axis 3",
+    pred4 = "Pred. axis 4") %>% 
   width(j = 2, width = 3, "cm") %>% 
   width(j = 2, width = 7, "cm") %>% 
   set_caption("Table S7: Covariation of the predictor variables with the first for axes
@@ -443,6 +460,13 @@ table_loading_one_pcoa <- loadings_all_predictors %>%
 ### Model ####
 
 table_lm_one_pcoa_clean <- table_lm_one_pcoa %>% 
+  mutate(Variable = case_when(Variable == "pred1" ~ "Predictor axis 1 (Social Complexity)",
+                              Variable == "pred2" ~ "Predictor axis 2 (frequency of conflicts)",
+                              Variable == "pred3" ~ "Predictor axis 3 (matrilineality/locality)",
+                              Variable == "pred4" ~ "Predictor axis 4 (agriculture type)",
+                              TRUE ~ Variable
+                              )) %>% 
+  mutate(Variable = str_replace(Variable, "pred", "Pred. axis ")) %>% 
   flextable() %>% 
   width(j = 1, width = 4, "cm") %>% 
   width(j = 2, width = 4, "cm") %>% 
@@ -452,9 +476,10 @@ table_lm_one_pcoa_clean <- table_lm_one_pcoa %>%
     p = "p-value"
   ) %>% 
   set_caption("Table S8: summary table of a frequentist model predicting Women's Status Index
-  by the firt four axes of the PCoA made on all the predictor variables (pred1 to pred4).
-  pred1 captures social complexity, pred2 the frequency of intercommunity armed conflict,
-  pred3 matrilineality/locality, and pred4 the type of agriculture (see Table S7).
+  by the firt four axes of the PCoA made on all the predictor variables (predictor axis 1 to 4).
+  Pred. axis 1 captures social complexity, Pred. axis 2 the frequency of intercommunity armed conflict,
+  Pred. axis 3 matrilineality/locality, and Pred. axis 4 the type of agriculture (see Table S7). 
+  Estimated coefficients and 95% confidence intervals are given, as well as the p-value of the effect. 
   Consistently with the main analysis presented in the article, complexity and matrilineality/locality 
   appeared to be the two significant predictors of women's status.")
 

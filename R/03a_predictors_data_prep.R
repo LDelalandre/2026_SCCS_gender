@@ -69,6 +69,13 @@ predictors_data_not_recoded <- predictors_data_uncorrected %>%
 
 predictors_data <- rbind(predictors_data_to_recode, predictors_data_not_recoded)
 
+societies_studied <- mat_filtered %>% rownames()
+
+predictors_data_coverage <- predictors_data %>% 
+  filter(soc_id %in% societies_studied) %>% 
+  dplyr::mutate("measured" = if_else(is.na(code), 0, 1)) %>% 
+  group_by(var_id) %>% 
+  summarize(coverage = sum(measured)/n()) 
 
 write.csv(predictors_detailed, here::here("output/predictors_detailed.csv"), row.names = F) 
 write.csv(predictors_data, here::here("output/predictors_data.csv"), row.names = F) 
