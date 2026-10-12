@@ -49,7 +49,7 @@ coords_df <- coords_df %>%
 
 # Avoid changes in the direction of Ax1.
 ref_sample <- coords_df %>% 
-  filter(pref_name_for_society == "Twana")
+  filter(pref_name_for_society == "Garo")
 
 if (ref_sample$Ax1 < 0) {
   coords_df[, "Ax1"] <- -coords_df[, "Ax1"]

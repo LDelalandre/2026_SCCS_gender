@@ -88,8 +88,7 @@ society_subsistence_type %>%
   group_by(SCCS820) %>% 
   summarize(n = n())
 
-# Subset on the agricultural societies only (OPTIONAL)
-subset_agri <- F
+## Subset on the agricultural societies only (OPTIONAL) ####
 if (subset_agri){
   whyte_data <- whyte_data %>% 
     left_join(society_subsistence_type %>% select(soc_id, description)) %>% 
@@ -97,6 +96,7 @@ if (subset_agri){
                               "Extensive Agriculture",
                               "Intensive Agriculture",
                               "Domestic Animals"))
+  # these are the agricultural societies within the SCCS
 }
 
   

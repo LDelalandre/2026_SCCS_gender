@@ -1,4 +1,3 @@
-source("R/01_import.R")
 library(flextable)
 
 category_colors <- c(
@@ -115,11 +114,12 @@ coord_societies <- coords_df %>%
   left_join(society_profile, by = "soc_id") %>%
   # left_join(context_wide, by = "soc_id") %>% 
   arrange(Ax1) %>% 
-  select(pref_name_for_society, soc_id, Ax1, main_focal_year, region6, origLat, origLong,
+  left_join(society_subsistence_type %>% select(soc_id, description)) %>% 
+  select(pref_name_for_society, soc_id, Ax1, main_focal_year, region6, origLat, origLong, description,
          HRAF_name_ID, HRAF_link) %>% 
   mutate(Ax1 = round(Ax1, digits = 3))%>%
   mutate(HRAF_link = utils::URLencode(HRAF_link, repeated = TRUE)) %>% # for URLs
-  left_join(coords_matched_86 %>% select(soc_id, phylo))
+  left_join(coords_matched_86 %>% select(soc_id, phylo)) 
 
 society_coverage_to_merge <- society_coverage %>% 
   as.data.frame() %>% 
@@ -138,6 +138,7 @@ table_societies<- coord_societies %>%
     region6 = "Region", 
     origLat = "Latitude",
     origLong = "Longitude",
+    description = "Main subsistence mode",
     HRAF_name_ID = "HRAF name (ID)",
     HRAF_link = "HRAF URL",
     phylo = "Society name in the phylogenetic tree",
@@ -149,12 +150,13 @@ table_societies<- coord_societies %>%
   width(j = 2, width = 1.4, unit = "cm") %>%
   width(j = 3, width = 1.4, unit = "cm") %>%
   width(j = 4, width = 1.4, unit = "cm") %>%
-  width(j = 5, width = 1.4, unit = "cm") %>%
-  width(j = 6, width = 1.4, unit = "cm") %>%
+  width(j = 5, width = 1.2, unit = "cm") %>%
+  width(j = 6, width = 1.2, unit = "cm") %>%
   width(j = 7, width = 1.4, unit = "cm") %>%
   width(j = 8, width = 1.4, unit = "cm") %>%
-  width(j = 9, width = 5, unit = "cm") %>%
-  width(j = 10, width = 1.2, unit = "cm") %>%
+  width(j = 9, width = 1.4, unit = "cm") %>%
+  width(j = 10, width = 5, unit = "cm") %>%
+  width(j = 11, width = 1.2, unit = "cm") %>%
   padding(padding = 2, part = "all") %>%
   theme_zebra() %>% 
   compose(
@@ -167,6 +169,7 @@ table_societies<- coord_societies %>%
               Societies are identified by their name and their ID in the SCCS, and ordered 
               in ascending values of Women's Status Index (i.e., their position on PCoA axis 1). 
               They are further attributed to Murdock's 6 world regions, and their coordinates are given. 
+              The main subsistence mode is indicated.
               The correspondence is made with the online database HRAF. 
               The name used in the phylogenetic tree is given. 
               Finally, coverage (the proportion of women's status variables measured for a society) is given.

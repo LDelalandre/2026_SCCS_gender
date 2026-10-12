@@ -66,7 +66,7 @@ obs_variance     <- obs_pos / sum(obs_pos)
 p_values <- sapply(1:10, function(ax) mean(perm_variance[, ax] >= obs_variance[ax]))
 
 results_eigenvalues <- data.frame(
-  axis      = paste0("PCo", 1:10),
+  axis      = paste0("Ax", 1:10),
   observed  = round(obs_variance[1:10] * 100, 1),
   perm_mean = round(colMeans(perm_variance) * 100, 1),
   perm_95   = round(apply(perm_variance, 2, quantile, 0.95) * 100, 1),
@@ -75,14 +75,14 @@ results_eigenvalues <- data.frame(
 print(results_eigenvalues)
 
 perm_long <- as.data.frame(perm_variance) %>%
-  setNames(paste0("PCo", 1:10)) %>%
+  setNames(paste0("Ax", 1:10)) %>%
   pivot_longer(everything(), names_to = "axis", values_to = "variance") %>%
-  mutate(axis = factor(axis, levels = paste0("PCo", 1:10)))
+  mutate(axis = factor(axis, levels = paste0("Ax", 1:10)))
 
 write.csv(perm_long, "output/02c_perm_long.csv", row.names=F)
 
 obs_df <- data.frame(
-  axis     = factor(paste0("PCo", 1:10), levels = paste0("PCo", 1:10)),
+  axis     = factor(paste0("Ax", 1:10), levels = paste0("Ax", 1:10)),
   observed = obs_variance[1:10] * 100
 )
 

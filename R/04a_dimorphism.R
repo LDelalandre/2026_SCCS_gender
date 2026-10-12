@@ -124,10 +124,11 @@ pcoa_dimorphism <- ggplot(plot_df, aes(x = PCo1, y = PCo2, color = has_size)) +
 ggsave("draft/fig/pcoa_dimorphism.png", pcoa_dimorphism, height = 8, width = 8, units = "cm")
 
 coords_extended %>% 
-  ggplot(aes(x = Ax1, y = height_ratio)) +
+  left_join(society_subsistence_type %>% select(soc_id, description)) %>% 
+  ggplot(aes(x = Ax1, y = height_ratio, color = description)) +
   geom_point() +
   theme_classic() +
-  ggtitle("All the regions grouped")
+  ggtitle("All the regions grouped") 
 
 pcoa_dimorphism_region <- coords_extended %>% 
   ggplot(aes(x = Ax1, y = height_ratio)) +
@@ -193,19 +194,41 @@ label_text <- paste0(
   "n = ", n
 )
 
+complexity_order <- c(
+  "Gathering",
+  "Hunting",
+  "Fishing",
+  "Domestic Animals",
+  "Incipient Agriculture",
+  "Extensive Agriculture",
+  "Intensive Agriculture",
+  "Trade"
+)
+
 biplot_dimorphism <- coords_extended %>%
-  tidybayes::add_epred_draws(mod_domination_size, ndraws = 100, re_formula = NA) %>%
+  left_join(society_subsistence_type %>% select(soc_id, description)) %>%
+  mutate(description = factor(description, levels = complexity_order)) %>%
+  tidybayes::add_epred_draws(
+    mod_domination_size,
+    ndraws = 100,
+    re_formula = NA
+  ) %>%
   ggplot(aes(x = Ax1, y = height_ratio)) +
-  tidybayes::stat_lineribbon(aes(y = .epred),
-                             .width = c(0.5, 0.95),
-                             alpha = 0.3,
-                             fill = "steelblue") +
-  geom_point() +
-  annotate("text", 
-           x = min(coords_extended$Ax1, na.rm = TRUE), 
-           y = max(coords_extended$height_ratio, na.rm = TRUE),
-           label = label_text,
-           hjust = 0, vjust = 1, size = 3.2, family = "mono") +
+  tidybayes::stat_lineribbon(
+    aes(y = .epred),
+    .width = c(0.5, 0.95),
+    alpha = 0.3,
+    fill = "steelblue"
+  ) +
+  geom_point(aes(color = description)) +
+  annotate(
+    "text",
+    x = min(coords_extended$Ax1, na.rm = TRUE),
+    y = max(coords_extended$height_ratio, na.rm = TRUE),
+    label = label_text,
+    hjust = 0, vjust = 1, size = 3.2, family = "mono"
+  ) +
+  scale_color_discrete(name = "Main subsistence type") +
   labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
 
@@ -553,13 +576,42 @@ pred <- grid |>
   tidybayes::add_epred_draws(mod_domination_phylo, re_formula = NA) |>   # population-level line
   mutate(height_pred = .epred * sy + my)                      # back-transform y
 
-biplot_dimorphism_phylo <- ggplot(pred, aes(x = Ax1, y = height_pred)) +
-  tidybayes::stat_lineribbon(.width = c(0.5, 0.95), alpha = 0.3, fill = "steelblue") +
-  geom_point(data = coords_matched_46, aes(y = height_ratio)) +
-  annotate("text",
-           x = min(coords_matched_46$Ax1), y = max(coords_matched_46$height_ratio),
-           label = label_text, hjust = 0, vjust = 1, size = 3.2, family = "mono") +
-  labs(x = "Women's Status Index", y = "Height ratio (women over men)") +
+# biplot_dimorphism_phylo <- pred %>% 
+#   ggplot(aes(x = Ax1, y = height_pred)) +
+#   tidybayes::stat_lineribbon(.width = c(0.5, 0.95), alpha = 0.3, fill = "steelblue") +
+#   geom_point(data = coords_matched_46, aes(y = height_ratio)) +
+#   annotate("text",
+#            x = min(coords_matched_46$Ax1), y = max(coords_matched_46$height_ratio),
+#            label = label_text, hjust = 0, vjust = 1, size = 3.2, family = "mono") +
+#   labs(x = "Women's Status Index", y = "Height ratio (women over men)") +
+#   theme_classic()
+
+
+points_data <- coords_matched_46 %>%
+  left_join(society_subsistence_type %>% select(soc_id, description)) %>%
+  mutate(description = factor(description, levels = complexity_order))
+
+biplot_dimorphism_phylo <- ggplot() +
+  tidybayes::stat_lineribbon(
+    data = pred,
+    aes(x = Ax1, y = height_pred, .draw = .draw),
+    .width = c(0.5, 0.95),
+    alpha = 0.3,
+    fill = "steelblue"
+  ) +
+  geom_point(
+    data = points_data,
+    aes(x = Ax1, y = height_ratio, color = description)
+  ) +
+  annotate(
+    "text",
+    x = min(coords_matched_46$Ax1, na.rm = TRUE),
+    y = max(coords_matched_46$height_ratio, na.rm = TRUE),
+    label = label_text,
+    hjust = 0, vjust = 1, size = 3.2, family = "mono"
+  ) +
+  scale_color_discrete(name = "Main subsistence type") +
+  labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
 
 ggsave("draft/fig/biplot_dimorphism_phylo.png", biplot_dimorphism_phylo)

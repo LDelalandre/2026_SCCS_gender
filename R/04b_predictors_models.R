@@ -24,7 +24,7 @@ if (run_models){
         cores = 4, iter = 4000, seed = 42,
         control = list(adapt_delta = 0.99) )
 
-  m_axis1_nophylo <- brm(Axis.1 ~ complexity + mo(matri_cat),
+  mod_axis1_nophylo <- brm(Axis.1 ~ complexity + mo(matri_cat),
                  data = pred_resp %>% drop_na(Axis.1, complexity, matri_cat),
                  family = gaussian(),
                  prior = c(prior(normal(0, 1), class = b),

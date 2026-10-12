@@ -3,7 +3,7 @@ library(tidybayes)
 library(ggplot2)
 library(patchwork)
 
-m_axis1 <- readRDS(here::here("output/models/m_axis1"))
+mod_axis1_phylo <- readRDS(here::here("output/models/mod_axis1_phylo"))
 
 # 1. POSTERIOR DISTRIBUTIONS
 

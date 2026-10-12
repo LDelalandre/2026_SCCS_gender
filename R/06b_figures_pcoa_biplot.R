@@ -64,12 +64,12 @@ boxplot_subsistence_status <- pred_resp %>%
   mutate(Axis.1_cr = (Axis.1 - mean(Axis.1))/sd(Axis.1) ) %>% 
   ggplot(aes(x = Axis.1_cr, y = label_n)) +
   geom_boxplot(outliers = F) +
-  geom_point(size = 0.5) +
+  geom_point(size = 1) +
   # geom_jitter(height = 0.15, alpha = 0.6, size = 2) +
   # stat_summary(fun = median, geom = "point",
   #              shape = 124, size = 8, color = "steelblue") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = "Women's status gradient", y = NULL) +
+  labs(x = "Women's Status Index", y = NULL) +
   theme_minimal(base_size = 11)
 
 ggsave("output/boxplot_subsistence_status.png",boxplot_subsistence_status, width = 5, height = 4)
