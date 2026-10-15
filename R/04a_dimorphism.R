@@ -384,15 +384,15 @@ coords_matched_46 <- coords_matched_46 |> mutate(
 
 # 2. Phylogenetic correlation matrix
 
-A <- ape::vcv(tree_46, corr = TRUE) # covariance matrix of societies
-A <- A[coords_matched_46$phylo, coords_matched_46$phylo]      # not required, but confirms names line up
-stopifnot(all(coords_matched_46$phylo %in% rownames(A)))
+A_46 <- ape::vcv(tree_46, corr = TRUE) # covariance matrix of societies
+A_46 <- A_46[coords_matched_46$phylo, coords_matched_46$phylo]      # not required, but confirms names line up
+stopifnot(all(coords_matched_46$phylo %in% rownames(A_46)))
 
 # 3. Model
 run_models <- F
 if (run_models){
   mod_domination_phylo <- brm(
-    height_z ~ Ax1_z + (1 | gr(phylo, cov = A)),
+    height_z ~ Ax1_z + (1 | gr(phylo, cov = A_46)),
     data  = coords_matched_46,
     data2 = list(A = A),
     family = gaussian(),
@@ -601,7 +601,7 @@ biplot_dimorphism_phylo <- ggplot() +
   ) +
   geom_point(
     data = points_data,
-    aes(x = Ax1, y = height_ratio, color = description)
+    aes(x = Ax1, y = height_ratio) #, color = description
   ) +
   annotate(
     "text",
@@ -610,7 +610,7 @@ biplot_dimorphism_phylo <- ggplot() +
     label = label_text,
     hjust = 0, vjust = 1, size = 3.2, family = "mono"
   ) +
-  scale_color_discrete(name = "Main subsistence type") +
+  # scale_color_discrete(name = "Main subsistence type") +
   labs(x = "Axis 1", y = "Height ratio") +
   theme_classic()
 

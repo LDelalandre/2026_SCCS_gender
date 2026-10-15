@@ -160,7 +160,12 @@ mat_ord <- data.frame(lapply(as.data.frame(mat_filtered), function(x) {
 }))
 rownames(mat_ord) <- rownames(mat_filtered)
 
-binary_cols <- c(6, 9, 13, 20, 21, 27, 33, 36, 47, 51)
+binary_vars <- gender_response %>% 
+  filter(var_id_whyte %in% c("DV6", "DV9", "DV13", "DV20", 
+                             "DV21", "DV27", "DV33", "DV36", "DV47", "DV51")) %>% 
+  pull(var_id)
+
+binary_cols <- which(colnames(mat_ord) %in% binary_vars)
 ordinal_cols <- setdiff(1:ncol(mat_ord), binary_cols)
 
 mat_ord_fixed <- mat_ord
@@ -172,3 +177,4 @@ mat_ord_fixed[, binary_cols] <- lapply(mat_ord[, binary_cols], function(x) {
   # maps lowest value -> 0, highest -> 1
   ifelse(x == vals[1], 0, ifelse(x == vals[2], 1, NA))
 })
+

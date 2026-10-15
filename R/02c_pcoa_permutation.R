@@ -242,6 +242,7 @@ p_values_loadings_sorted <- p_values_loadings %>%
   sort()
 nvar_significant <- p_values_loadings_sorted[1:12] %>%  # 12 to cross the 90% threshold
   names()
+write.csv(nvar_significant, "output/nvar_significant.csv", row.names = F)
 
 
 

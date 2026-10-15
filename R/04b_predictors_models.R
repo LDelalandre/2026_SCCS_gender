@@ -235,24 +235,38 @@ pred_resp_dimorphism %>%
 
 run_model <- F
 
+pred_resp_dimorphism_phylo <- pred_resp_dimorphism %>% 
+  left_join(coords_matched_46 %>% select(soc_id, phylo, key, name))
+
 if (run_model == T){
+  bf_height <- bf(
+    height_ratio ~ Ax1 + complexity +
+      (1 | gr(phylo, cov = A_46))
+  )
+  
+  bf_mediator <- bf(
+    Ax1 ~ complexity + mo(matri_cat) +
+      (1 | gr(phylo, cov = A_46))
+  )
+  
   mod_mediation <- brm(
-    bf(height_ratio ~ Ax1 + complexity + (1 | region6)) +
-      bf(Ax1 ~ complexity + herding_importance + mo(matri_cat) + hunting) +
-      set_rescor(FALSE),
+    bf_height + bf_mediator + set_rescor(FALSE),
+    data = pred_resp_dimorphism_phylo,
+    data2 = list(A_46 = A_46),
     family = gaussian(),
     prior = c(
-      # height_ratio equation
       prior(normal(0, 0.5), class = b, resp = heightratio),
       prior(normal(0, 0.5), class = Intercept, resp = heightratio),
       prior(exponential(1), class = sigma, resp = heightratio),
       prior(exponential(1), class = sd, resp = heightratio),
-      # Ax1 equation
+      
       prior(normal(0, 0.5), class = b, resp = Ax1),
       prior(normal(0, 0.5), class = Intercept, resp = Ax1),
-      prior(exponential(1), class = sigma, resp = Ax1)
+      prior(exponential(1), class = sigma, resp = Ax1),
+      prior(exponential(1), class = sd, resp = Ax1),
+      
+      prior(dirichlet(1), class = simo, coef = "momatri_cat1", resp = Ax1)
     ),
-    data = pred_resp_dimorphism,  # needs all variables in one dataframe
     cores = 4, iter = 4000, seed = 42,
     control = list(adapt_delta = 0.99)
   )

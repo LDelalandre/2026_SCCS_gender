@@ -2,7 +2,12 @@
 
 
 # Biplots ####
-pred_resp %>%
+
+twana_garo <- pred_resp %>% 
+  filter(soc_id %in% c("SCCS133", "SCCS69")) %>% 
+  mutate(name = if_else(soc_id == "SCCS69", "Garo","Twana"))
+
+plot_twana_garo <- pred_resp %>%
   ggplot(aes(x = Axis.1, y = Axis.2)) +
   # geom_point(aes(color = complexity), size = 2.5, alpha = 0.8) +
   geom_point() +
@@ -10,10 +15,12 @@ pred_resp %>%
                         midpoint = 0, name = "Complexity") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
-  labs(x = "Axis 1", y = "Axis 2") +
-  theme_minimal(base_size = 13) 
-# ggrepel::geom_text_repel((aes(label = soc_id)))
+  labs(x = "Axis 1: Women's Status Index", y = "Axis 2") +
+  theme_minimal(base_size = 13) +
+  geom_point(data = twana_garo, aes(x = Axis.1, y = Axis.2, label = soc_id), color = "red") +
+  ggrepel::geom_label_repel(data = twana_garo, aes(x = Axis.1, y = Axis.2, label = name), color = "red")
 
+ggsave(filename = "draft/fig/twana-garo.png", plot_twana_garo)
 
 # Subsistence ####
 

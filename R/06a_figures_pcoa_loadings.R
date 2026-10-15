@@ -1,6 +1,8 @@
 
 # VARIABLE IMPORT AND DEFINITION ####
 
+nvar_significant <- read.csv("output/nvar_significant.csv")  %>% pull(x)
+
 pcoa_result <-  readRDS(here::here("output/pcoa_result"))
 
 perm_long <- read.csv("output/02c_perm_long.csv")
@@ -21,7 +23,7 @@ var_loadings <- cor(
 ) %>%
   as.data.frame() %>%
   rownames_to_column("var_id") %>%
-  left_join(whyte_category %>% select(var_id, var_id_whyte, title, title_shortened, category_Angarika),
+  left_join(whyte_category_angarika %>% select(var_id, var_id_whyte, title, title_shortened, category_Angarika),
             by = "var_id")
 
 
@@ -116,28 +118,6 @@ y_axis_colors <- vars_plot %>%
   mutate(color = category_colors[as.character(category_Angarika)]) %>%
   pull(color)
 
-# # Step 3: plot
-# loadings_plot <- ggplot(vars_plot, aes(x = loading,
-#                                        y = title_shortened,
-#                                        fill = category_Angarika,
-#                                        alpha = significant)) +
-#   geom_col() +
-#   geom_vline(xintercept = c(-0.30, 0.30),
-#              linetype = "dotted", color = "grey40", alpha = 0.7) +
-#   geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.3) +
-#   facet_wrap(~ axis, nrow = 1) +
-#   scale_fill_manual(values = category_colors, name = "Domain") +
-#   scale_alpha_manual(values = c("FALSE" = 0.25, "TRUE" = 1), guide = "none") +
-#   scale_y_discrete(limits = rev) +
-#   theme_bw(base_size = 9) +
-#   theme(
-#     axis.text.y = element_text(size = 7, color = rev(y_axis_colors)),
-#     strip.background = element_blank(),
-#     strip.text = element_text(face = "bold", size = 10),
-#     legend.position = "none",
-#     panel.spacing = unit(1, "lines")
-#   ) +
-#   labs(x = "Loading (corrected for coding direction)", y = NULL)
 
 # Standalone legend
 legend_plot <- ggplot(
@@ -179,7 +159,7 @@ make_loading_plot <- function(axes = c("Axis.1", "Axis.2", "Axis.3",
       legend.position = "none",
       panel.spacing  = unit(1, "lines")
     ) +
-    labs(x = "Loading (corrected for coding direction)", y = NULL)
+    labs(x = "Correlation of variables with PCoA axes", y = NULL)
   
   if (significance) {
     p <- p + scale_alpha_manual(values = c("FALSE" = 0.25, "TRUE" = 1), guide = "none")
@@ -195,8 +175,12 @@ make_loading_plot <- function(axes = c("Axis.1", "Axis.2", "Axis.3",
 # Axis 1 only
 loadings_plot <- make_loading_plot("Axis.1", significance = T)
 loadings_plot[[1]] %>% plot
-loadings_plot[[2]]
-loadings_plot_legend <- cowplot::plot_grid(loadings_plot[[1]], loadings_plot[[2]], rel_widths = c(0.4, 1))
+loadings_plot[[2]] + 
+  labs(x = "Women's Status Index", y = NULL)
+  
+loadings_plot_legend <- cowplot::plot_grid(loadings_plot[[1]], 
+                                           loadings_plot[[2]] +  labs(x = "Women's Status Index", y = NULL) , 
+                                           rel_widths = c(0.4, 1))
 
 # All axes
 loadings_plot_full <- make_loading_plot()
@@ -215,10 +199,10 @@ ggsave("draft/fig/loadings_plot.png", loadings_plot_legend,
 
 ## Plus permutation results ####
 
-appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == "PCo1"), 
+appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == "Ax1"), 
                                                    aes(x = variance * 100)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
-  geom_vline(data = obs_df %>% filter(axis == "PCo1"), 
+  geom_vline(data = obs_df %>% filter(axis == "Ax1"), 
              aes(xintercept = observed), color = "red", linewidth = 0.8) +
   # facet_wrap(~ axis, scales = "free_x") +
   labs(x        = "Variance explained \n by Axis 1(%)",
@@ -238,7 +222,8 @@ appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = Ax1)) 
   theme_classic(base_size = 11)
 
 A <- loadings_plot[[2]] +
-  ggtitle("A.")
+  ggtitle("A.") + 
+  labs(x = "Women's Status Index", y = NULL)
 
 B <- appendix_pcoa_permutation_variance_axis1 +
   ggtitle("B.") 

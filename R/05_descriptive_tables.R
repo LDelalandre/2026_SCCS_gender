@@ -502,6 +502,8 @@ save_as_docx(
   
   # table_technology,
   
+  table_dag,
+  
   pr_section = officer::prop_section(
     page_size = officer::page_size(orient = "portrait")
   ),

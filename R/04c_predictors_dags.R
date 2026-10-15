@@ -100,12 +100,6 @@ rename_variables <- function(character){
     str_replace_all(pattern = "Ax1", "women's_status")
 }
 
-rename_variables( "complexity → Ax1 → height_ratio → Ax1")
-
-ci_to_character(fdag) %>% 
-  rename_variables
-
-
 dag_to_table_row <- function(fdag){
   graph <- dag_to_character(fdag) %>% 
     rename_variables
@@ -133,7 +127,7 @@ dag_to_table_row <- function(fdag){
   pred1 <- preds[[1]][1]
 
   est1 <- sum$coefficients[pred_tested, 1] %>%  # estimate
-    round(digits = 3)
+    round(digits = 1)
   pval1 <- sum$coefficients[pred_tested, 4] %>%  # p-value of the coefficient
     round(digits = 3)
   info <- paste0(pred_tested, ": coefficient = ", est1, ", p = ", pval1)
@@ -211,6 +205,9 @@ dag6 <- dagitty('dag {
 }')
 
 
+# I also omit partial graphs
+
+
 
 # Table ####
 
@@ -227,15 +224,57 @@ lapply(list(dag_fork_1, dag_fork_2, dag_fork_3), dag_to_table_row) %>%
   flextable::flextable()
 
 
-lapply(list(dag1, dag2, dag3,
+table_dag <- lapply(list(dag1, dag2, dag3,
             dag_fork_1, dag_fork_2, dag_fork_3,
             dag_col_1, dag_col_2, dag_col_3), dag_to_table_row) %>% 
   bind_rows() %>% 
-  flextable::flextable()
+  cbind(graph_structure = c(rep("chain", 3),
+                            rep("fork", 3),
+                            rep("collider", 3)), .) %>% 
+  cbind(graph_number = c(1:9), .) %>% 
+  select(-pval_mod) %>% 
+  flextable::flextable() %>% 
+  flextable::set_header_labels(
+    graph_structure = "Graph structure",
+    graph_number = "Graph number",
+    graph = "Causal links",
+    ci_renamed = "Predicted conditional independence",
+    formula_character = "Model",
+    # pval_mod = "Model's p-value",
+    info = "Test of the predicted conditional independence",
+    conclusion = "Conclusion"
+  ) %>% 
+  flextable::set_caption("Table Sx. Putative causal graphs linking social complexity, women's status, and height ratios, 
+  and tests of the related conditional independence predictions.  
+  Putative causal links, of the form of either a chain (A causing B causing C), a fork (A causing both B and C), 
+  or a collider (A and B jointly causing C) are presented. 
+  The predicted conditional independence resulting from each graph were computed using the `impliedConditionalIndependencies` 
+  function of the `dagitty` R package. A conditional independence statement 'C _||_ A | B' reads: 'C is independent of A knowing B'. 
+  A potential graph structure is rejected if the predicted conditional independence is not verified in the data 
+  (in the previous example, if A still predicts C when accounting for B).
+  
+  Note that graph A -> B -> C generates the same conditional indendence prediction as C -> B -> A, 
+  and they are are therefore not distinguishable based on this method.  
+  
+  To test the conditional independence prediction of each graph, we used linear modeling, whose formulas are reported. 
+  The coefficient and p-value of the conditional independence test are given. 
+  The last column states whether the graph structure is rejected with the data. 
+  
+  Here, data consists in the complexity variable, women's status index, and height ratios, 
+  for the 46 societies for which the latter was available. 
+
+  Two graphs were not rejected by the conditional independence tests. The first, graph 1, proposes that 
+  increased complexity leads to a decrease in women's status, 
+  which further increases sex differences in height (or the equivalent opposite, from height ratio to 
+  women's status and to complexity). The second, graph 6, proposed that women's status drives 
+  both social complexity and sex differences in height. 
+
+  N.B. Graph structures may be rejected not because the causal links displayed are false, 
+  but because of omitted variables. For more details, see McElreath, R. (2020). Statistical rethinking: 
+  A Bayesian course with examples in R and Stan (Second edition). CRC Press. 
+  ")
 
 
-dag_to_table_row(dag1) %>% 
-  select(-info)
 
 
 
