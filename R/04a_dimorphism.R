@@ -67,20 +67,22 @@ write.csv(gleeson_id,"output/2026-03_SCCS_gleeson_id.csv", row.names = F)
 
 # glottocode ####
 
-library(lingtypology)
+# library("lingtypology")
+# 
+# glottolog_families <- lingtypology::glottolog %>%
+#   select(glottocode, affiliation) %>%
+#   mutate(
+#     language_family = if_else(
+#       affiliation == "" | is.na(affiliation),
+#       "isolate",                          # language isolates have no affiliation
+#       sub(",.*", "", affiliation)         # take everything before the first comma
+#     )
+#   )
 
-glottolog_families <- lingtypology::glottolog %>%
-  select(glottocode, affiliation) %>%
-  mutate(
-    language_family = if_else(
-      affiliation == "" | is.na(affiliation),
-      "isolate",                          # language isolates have no affiliation
-      sub(",.*", "", affiliation)         # take everything before the first comma
-    )
-  )
+# societies_glottolog <- societies %>% 
+#   left_join(glottolog_families)
 
-societies_glottolog <- societies %>% 
-  left_join(glottolog_families)
+societies_glottolog <- societies # no need for glottolog anymore
 
 # Analyse ####
 
@@ -99,9 +101,9 @@ coords_extended <- coords_df %>%
   left_join(dimorphism_vals,  by = "soc_id") %>% 
   left_join(societies_glottolog)
 
-coords_extended %>% 
-  count(language_family) %>% 
-  arrange(desc(n))
+# coords_extended %>% 
+#   count(language_family) %>% 
+#   arrange(desc(n))
 
 coords_extended %>% 
   filter(!is.na(height_ratio)) %>% 

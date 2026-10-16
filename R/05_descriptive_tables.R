@@ -450,7 +450,7 @@ table_loading_one_pcoa <- loadings_all_predictors %>%
     pred4 = "Pred. axis 4") %>% 
   width(j = 2, width = 3, "cm") %>% 
   width(j = 2, width = 7, "cm") %>% 
-  set_caption("Table S7: Covariation of the predictor variables with the first for axes
+  set_caption("Table S6: Covariation of the predictor variables with the first for axes
               of the PCoA made on all predictor variables. Variables arranged by their correlation
               with Axis 1, capturing nearly 40% of the variance (see Fig S9). 
               The first dimension captures variables linked to social complexity. 
@@ -478,7 +478,7 @@ table_lm_one_pcoa_clean <- table_lm_one_pcoa %>%
     `HR [CI]` = "Coefficient [95% confidence interval]",
     p = "p-value"
   ) %>% 
-  set_caption("Table S8: summary table of a frequentist model predicting Women's Status Index
+  set_caption("Table S7: summary table of a frequentist model predicting Women's Status Index
   by the firt four axes of the PCoA made on all the predictor variables (predictor axis 1 to 4).
   Pred. axis 1 captures social complexity, Pred. axis 2 the frequency of intercommunity armed conflict,
   Pred. axis 3 matrilineality/locality, and Pred. axis 4 the type of agriculture (see Table S7). 

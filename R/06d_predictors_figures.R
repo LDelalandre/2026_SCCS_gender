@@ -70,6 +70,33 @@ pred_complexity <- complexity_grid %>%
     .groups = "drop"
   )
 
+pred_complexity <- complexity_grid %>%
+  add_epred_draws(mod_axis1_phylo, ndraws = 500, re_formula = NA) %>%
+  group_by(complexity) %>%
+  summarise(
+    mean  = mean(.epred),
+    lower = quantile(.epred, 0.025),
+    upper = quantile(.epred, 0.975),
+    .groups = "drop"
+  )
+
+# grid_full <- tidyr::crossing(
+#   complexity_grid,
+#   phylo = unique(mod_axis1_phylo$data$phylo)
+# )
+# 
+# pred_complexity <- grid_full %>%
+#   add_epred_draws(mod_axis1_phylo, ndraws = 500) %>%
+#   group_by(complexity, .draw) %>%
+#   summarise(.epred = mean(.epred), .groups = "drop") %>%   # average over societies, per draw
+#   group_by(complexity) %>%
+#   summarise(
+#     mean  = mean(.epred),
+#     lower = quantile(.epred, 0.025),
+#     upper = quantile(.epred, 0.975),
+#     .groups = "drop"
+#   )
+
 p_a <- ggplot() +
   geom_ribbon(data = pred_complexity,
               aes(x = complexity, ymin = lower, ymax = upper),

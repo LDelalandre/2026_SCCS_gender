@@ -1,5 +1,4 @@
 library(dagitty)
-library(ggdag)
 library(ggplot2)
 
 
@@ -244,7 +243,12 @@ table_dag <- lapply(list(dag1, dag2, dag3,
     info = "Test of the predicted conditional independence",
     conclusion = "Conclusion"
   ) %>% 
-  flextable::set_caption("Table Sx. Putative causal graphs linking social complexity, women's status, and height ratios, 
+  width(j = 1, width = 1.3, "cm") %>%
+  width(j = 2, width = 1.3, "cm") %>%
+  width(j = 3, width = 3.5, "cm") %>%
+  width(j = 4, width = 3.5, "cm") %>%
+  width(j = 5, width = 3, "cm") %>%
+  flextable::set_caption("Table S8. Putative causal graphs linking social complexity, women's status, and height ratios, 
   and tests of the related conditional independence predictions.  
   Putative causal links, of the form of either a chain (A causing B causing C), a fork (A causing both B and C), 
   or a collider (A and B jointly causing C) are presented. 
@@ -274,6 +278,14 @@ table_dag <- lapply(list(dag1, dag2, dag3,
   A Bayesian course with examples in R and Stan (Second edition). CRC Press. 
   ")
 
+
+save_as_docx(
+  table_dag,
+  pr_section = officer::prop_section(
+    page_size = officer::page_size(orient = "portrait")
+  ),
+  path = "draft/tbl/talbe_dag.docx"
+)
 
 
 

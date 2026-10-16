@@ -58,28 +58,50 @@ pcoa_biplot_subsistence <- pred_resp %>%
 
 ggsave("draft/fig/pcoa_biplot_subsistence.png", pcoa_biplot_subsistence)
 
+## Boxplot subsistence status ####
 
-boxplot_subsistence_status <- pred_resp %>%
+library(rstatix)   # kruskal_test, dunn_test
+
+plot_df <- pred_resp %>%
   left_join(society_subsistence_type) %>%
   filter(!str_detect(label, "Trade"), !is.na(label)) %>%
   mutate(SCCS820_num = as.numeric(as.character(SCCS820))) %>%
   add_count(label, name = "n") %>%
   mutate(
     label_n = paste0(label, " (n=", n, ")"),
-    label_n = fct_rev(fct_reorder(label_n, SCCS820_num, .fun = min))
-  ) %>%
-  mutate(Axis.1_cr = (Axis.1 - mean(Axis.1))/sd(Axis.1) ) %>% 
-  ggplot(aes(x = Axis.1_cr, y = label_n)) +
-  geom_boxplot(outliers = F) +
+    label_n = fct_rev(fct_reorder(label_n, SCCS820_num, .fun = min)),
+    Axis.1_cr = (Axis.1 - mean(Axis.1)) / sd(Axis.1)
+  )
+
+kw <- kruskal_test(plot_df, Axis.1_cr ~ label_n)
+kw_label <- paste0("Kruskal-Wallis: H(", kw$df, ") = ", round(kw$statistic, 2),
+                   ", p ", ifelse(kw$p < 0.001, "< 0.001", paste("=", round(kw$p, 3))))
+
+ggplot(plot_df, aes(x = Axis.1_cr, y = label_n)) +
+  geom_boxplot(outliers = FALSE) +
   geom_point(size = 1) +
-  # geom_jitter(height = 0.15, alpha = 0.6, size = 2) +
-  # stat_summary(fun = median, geom = "point",
-  #              shape = 124, size = 8, color = "steelblue") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = "Women's Status Index", y = NULL) +
+  labs(x = "Women's Status Index", y = NULL, subtitle = kw_label) +
   theme_minimal(base_size = 11)
 
-ggsave("output/boxplot_subsistence_status.png",boxplot_subsistence_status, width = 5, height = 4)
+dunn <- dunn_test(plot_df, Axis.1_cr ~ label_n, p.adjust.method = "holm")
+dunn %>% select(group1, group2, p.adj, p.adj.signif)
+
+library(ggpubr)
+
+sig <- dunn %>% filter(p.adj < 0.05)
+
+boxplot_subsistence_status <- ggplot(plot_df, aes(x = label_n, y = Axis.1_cr)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_point(size = 1) +
+  stat_pvalue_manual(sig, label = "p.adj.signif",
+                     y.position = max(plot_df$Axis.1_cr) + seq_len(nrow(sig)) * 0.35,
+                     step.increase = 0) +
+  coord_flip() +
+  labs(y = "Women's Status Index", x = NULL, subtitle = kw_label) +
+  theme_minimal(base_size = 11)
+
+ggsave("output/boxplot_subsistence_status.png",boxplot_subsistence_status, width = 7, height = 7)
 
 # map societies ####
 library(maps)
