@@ -1,15 +1,15 @@
-R version 4.6.0 (2026-04-24)
+R version 4.6.1 (2026-06-24)
 Platform: x86_64-pc-linux-gnu
-Running under: Ubuntu 24.04.4 LTS
+Running under: Ubuntu 24.04.5 LTS
 
 Matrix products: default
 BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
 LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0  LAPACK version 3.12.0
 
 locale:
- [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
- [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8    LC_PAPER=en_US.UTF-8       LC_NAME=C                 
- [9] LC_ADDRESS=C               LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8   
+ [6] LC_MESSAGES=en_US.UTF-8    LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 
 time zone: Europe/Vienna
 tzcode source: system (glibc)
@@ -18,35 +18,27 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] broom_1.0.13        corrplot_0.95       officer_0.7.5       flextable_0.9.12    brms_2.23.0         Rcpp_1.1.1-1.1     
- [7] lingtypology_1.1.25 stringdist_0.9.17   patchwork_1.3.2     vegan_2.7-5         permute_0.9-10      ape_5.8-1          
-[13] cluster_2.1.8.2     lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       dplyr_1.2.1         purrr_1.2.2        
-[19] readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.3       tidyverse_2.0.0    
+ [1] tidybayes_3.0.7    maps_3.4.3         ggpubr_0.6.3       rstatix_0.7.3      broom_1.0.13       corrplot_0.95      officer_0.7.5      flextable_0.9.12  
+ [9] dagitty_0.3-4      Matrix_1.7-6       stringi_1.8.7      smatr_3.5-1        brms_2.23.0        Rcpp_1.1.1-1.1     stringdist_0.9.17  utile.tables_0.3.0
+[17] patchwork_1.3.2    vegan_2.7-5        permute_0.9-10     ape_5.8-1          cluster_2.1.8.2    lubridate_1.9.5    forcats_1.0.1      stringr_1.6.0     
+[25] dplyr_1.2.1        purrr_1.2.2        readr_2.2.0        tidyr_1.3.2        tibble_3.3.1       ggplot2_4.0.3      tidyverse_2.0.0   
 
 loaded via a namespace (and not attached):
-  [1] gridExtra_2.3            inline_0.3.21            rlang_1.2.0              magrittr_2.0.5          
-  [5] otel_0.2.0               matrixStats_1.5.0        compiler_4.6.0           mgcv_1.9-4              
-  [9] loo_2.9.0                systemfonts_1.3.2        vctrs_0.7.3              reshape2_1.4.5          
- [13] pkgconfig_2.0.3          arrayhelpers_1.1-0       crayon_1.5.3             fastmap_1.2.0           
- [17] backports_1.5.1          labeling_0.4.3           utf8_1.2.6               rmarkdown_2.31          
- [21] tzdb_0.5.0               ragg_1.5.2               bit_4.6.0                xfun_0.58               
- [25] jsonlite_2.0.0           tidybayes_3.0.7          uuid_1.2-2               parallel_4.6.0          
- [29] R6_2.6.1                 stringi_1.8.7            RColorBrewer_1.1-3       StanHeaders_2.32.10     
- [33] estimability_1.5.1       knitr_1.51               rstan_2.32.7             bayesplot_1.15.0        
- [37] leaflet.minicharts_0.6.3 Matrix_1.7-5             splines_4.6.0            timechange_0.4.0        
- [41] tidyselect_1.2.1         rstudioapi_0.18.0        abind_1.4-8              codetools_0.2-20        
- [45] curl_7.1.0               pkgbuild_1.4.8           lattice_0.22-9           plyr_1.8.9              
- [49] withr_3.0.2              bridgesampling_1.2-1     S7_0.2.2                 askpass_1.2.1           
- [53] posterior_1.7.0          evaluate_1.0.5           coda_0.19-4.1            RcppParallel_5.1.11-2   
- [57] zip_2.3.3                xml2_1.5.2               ggdist_3.3.3             pillar_1.11.1           
- [61] tensorA_0.36.2.1         checkmate_2.3.4          stats4_4.6.0             distributional_0.7.0    
- [65] generics_0.1.4           vroom_1.7.1              rprojroot_2.1.1          hms_1.1.4               
- [69] rstantools_2.6.0         scales_1.4.0             glue_1.8.1               gdtools_0.5.1           
- [73] emmeans_2.0.3            tools_4.6.0              data.table_1.18.4        mvtnorm_1.4-0           
- [77] cowplot_1.2.0            grid_4.6.0               QuickJSR_1.10.0          crosstalk_1.2.2         
- [81] nlme_3.1-169             cli_3.6.6                textshaping_1.0.5        fontBitstreamVera_0.1.1 
- [85] svUnit_1.0.8             viridisLite_0.4.3        Brobdingnag_1.2-9        V8_8.2.0                
- [89] gtable_0.3.6             digest_0.6.39            fontquiver_0.2.1         htmlwidgets_1.6.4       
- [93] farver_2.1.2             htmltools_0.5.9          lifecycle_1.0.5          leaflet_2.2.3           
- [97] here_1.0.2               openssl_2.4.1            fontLiberation_0.1.0     bit64_4.8.2             
-[101] MASS_7.3-65             
+  [1] RColorBrewer_1.1-3      tensorA_0.36.2.1        rstudioapi_0.18.0       jsonlite_2.0.0          datawizard_1.3.1        magrittr_2.0.5         
+  [7] TH.data_1.1-5           estimability_1.5.1      rmarkdown_2.31          farver_2.1.2            ragg_1.5.2              vctrs_0.7.3            
+ [13] askpass_1.2.1           htmltools_0.5.9         distributional_0.7.0    curl_7.1.0              Formula_1.2-5           StanHeaders_2.32.10    
+ [19] plyr_1.8.9              sandwich_3.1-1          emmeans_2.0.3           zoo_1.8-15              uuid_1.2-2              lifecycle_1.0.5        
+ [25] pkgconfig_2.0.3         R6_2.6.1                fastmap_1.2.0           digest_0.6.39           rprojroot_2.1.1         textshaping_1.0.5      
+ [31] labeling_0.4.3          timechange_0.4.0        abind_1.4-8             mgcv_1.9-4              compiler_4.6.1          here_1.0.2             
+ [37] bit64_4.8.2             fontquiver_0.2.1        withr_3.0.2             S7_0.2.2                backports_1.5.1         inline_0.3.21          
+ [43] carData_3.0-6           QuickJSR_1.10.0         pkgbuild_1.4.8          ggsignif_0.6.4          MASS_7.3-66             openssl_2.4.1          
+ [49] loo_2.9.0               tools_4.6.1             otel_0.2.0              zip_2.3.3               glue_1.8.1              nlme_3.1-171           
+ [55] grid_4.6.1              checkmate_2.3.4         reshape2_1.4.5          generics_0.1.4          gtable_0.3.6            tzdb_0.5.0             
+ [61] data.table_1.18.4       hms_1.1.4               car_3.1-5               xml2_1.5.2              utf8_1.2.6              ggrepel_0.9.8          
+ [67] pillar_1.11.1           ggdist_3.3.3            vroom_1.7.1             posterior_1.7.0         splines_4.6.1           lattice_0.23-1         
+ [73] survival_3.8-12         bit_4.6.0               tidyselect_1.2.1        fontLiberation_0.1.0    knitr_1.51              fontBitstreamVera_0.1.1
+ [79] arrayhelpers_1.1-0      gridExtra_2.3           V8_8.2.0                stats4_4.6.1            xfun_0.58               bridgesampling_1.2-1   
+ [85] matrixStats_1.5.0       rstan_2.32.7            boot_1.3-32             evaluate_1.0.5          codetools_0.2-20        gdtools_0.5.1          
+ [91] cli_3.6.6               RcppParallel_5.1.11-2   systemfonts_1.3.2       coda_0.19-4.1           svUnit_1.0.8            parallel_4.6.1         
+ [97] rstantools_2.6.0        bayestestR_0.18.1       bayesplot_1.15.0        Brobdingnag_1.2-9       viridisLite_0.4.3       mvtnorm_1.4-0          
+[103] scales_1.4.0            insight_1.5.1           crayon_1.5.3            rlang_1.2.0             cowplot_1.2.0           multcomp_1.4-32        

@@ -121,8 +121,10 @@ scree_plots <- lapply(names(cat_results), function(cat) {
           plot.title = element_text(face = "bold"))
 })
 names(scree_plots) <- names(cat_results)
+scree_plots[[4]] <- scree_plots[[4]] +
+  ggplot2::labs(title = "lineage/locality")
 
-appendix_predictors_pcoa <- wrap_plots(scree_plots, ncol = 3)
+appendix_predictors_pcoa <- wrap_plots(scree_plots[1:4], ncol = 2)
 ggsave("draft/fig/appendix_predictors_pcoa.png", appendix_predictors_pcoa)
 
 
@@ -226,10 +228,18 @@ all_axes <- complexity %>%
   left_join(hunting, by = "soc_id") %>% 
   full_join(warfare,     by = "soc_id")
 
-response_axes <- pcoa_result$vectors[,c(1:5)] %>%
-  as.data.frame() %>%
-  rownames_to_column("soc_id")
+# response_axes <- pcoa_result$vectors[,c(1:5)] %>%
+#   as.data.frame() %>%
+#   rownames_to_column("soc_id")
 
+response_axes <- coords_df %>% 
+  select(soc_id, Ax1, Ax2, Ax3, Ax4, Ax5) %>% 
+  rename(Axis.1 = Ax1) %>% 
+  rename(Axis.2 = Ax2) %>% 
+  rename(Axis.3 = Ax3) %>% 
+  rename(Axis.4 = Ax4) %>% 
+  rename(Axis.5 = Ax5) 
+  
 pred_resp <- all_axes %>% 
   left_join(response_axes, by = "soc_id") %>%
   # recode matri as a categorical variable with 3 values

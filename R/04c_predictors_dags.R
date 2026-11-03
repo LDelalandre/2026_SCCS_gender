@@ -1,5 +1,6 @@
 library(dagitty)
 library(ggplot2)
+library(flextable)
 
 
 ## data ####
@@ -234,20 +235,23 @@ table_dag <- lapply(list(dag1, dag2, dag3,
   select(-pval_mod) %>% 
   flextable::flextable() %>% 
   flextable::set_header_labels(
-    graph_structure = "Graph structure",
-    graph_number = "Graph number",
+    graph_structure = "Graph type",
+    graph_number = "Graph",
     graph = "Causal links",
     ci_renamed = "Predicted conditional independence",
     formula_character = "Model",
     # pval_mod = "Model's p-value",
-    info = "Test of the predicted conditional independence",
-    conclusion = "Conclusion"
+    info = "Test",
+    conclusion = "Support"
   ) %>% 
-  width(j = 1, width = 1.3, "cm") %>%
-  width(j = 2, width = 1.3, "cm") %>%
+  width(j = 1, width = 1.6, "cm") %>%
+  width(j = 2, width = 2, "cm") %>%
   width(j = 3, width = 3.5, "cm") %>%
   width(j = 4, width = 3.5, "cm") %>%
   width(j = 5, width = 3, "cm") %>%
+  width(j = 6, width = 3, "cm") %>%
+  width(j = 7, width = 2, "cm") %>%
+  fontsize( i = NULL, j = NULL, size = 9, part = "body") %>% 
   flextable::set_caption("Table S8. Putative causal graphs linking social complexity, women's status, and height ratios, 
   and tests of the related conditional independence predictions.  
   Putative causal links, of the form of either a chain (A causing B causing C), a fork (A causing both B and C), 

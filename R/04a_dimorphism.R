@@ -119,7 +119,7 @@ plot_df <- data.frame(
 pcoa_dimorphism <- ggplot(plot_df, aes(x = PCo1, y = PCo2, color = has_size)) +
   geom_point(size = 1) +
   scale_color_manual(values = c("has size data" = "steelblue", "missing" = "grey80")) +
-  labs(x = "PCo1", y = "PCo2", color = NULL) +
+  labs(x = "Ax1", y = "Ax2", color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "top")
 
@@ -135,9 +135,10 @@ coords_extended %>%
 pcoa_dimorphism_region <- coords_extended %>% 
   ggplot(aes(x = Ax1, y = height_ratio)) +
   geom_point() +
+  labs(x = "Ax1 (WSI)", y = "Height ratio (women/men)", color = NULL) +
   theme_classic() +
   # ggtitle("All the regions grouped") +
-  facet_wrap(~ region6)
+  facet_wrap(~ region6) 
 
 ggsave("draft/fig/pcoa_dimorphism_region.png", pcoa_dimorphism_region, height = 15, width = 15, units = "cm")
 
@@ -613,7 +614,8 @@ biplot_dimorphism_phylo <- ggplot() +
     hjust = 0, vjust = 1, size = 3.2, family = "mono"
   ) +
   # scale_color_discrete(name = "Main subsistence type") +
-  labs(x = "Axis 1", y = "Height ratio") +
+  labs(x = "Women's Status Index (WSI)", y = "Height ratio") +
   theme_classic()
 
-ggsave("draft/fig/biplot_dimorphism_phylo.png", biplot_dimorphism_phylo)
+ggsave("draft/fig/biplot_dimorphism_phylo.png", biplot_dimorphism_phylo, 
+       width = 17, height = 14, units = "cm", dpi = 300)

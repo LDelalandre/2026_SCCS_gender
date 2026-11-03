@@ -205,7 +205,7 @@ appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == 
   geom_vline(data = obs_df %>% filter(axis == "Ax1"), 
              aes(xintercept = observed), color = "red", linewidth = 0.8) +
   # facet_wrap(~ axis, scales = "free_x") +
-  labs(x        = "Variance explained \n by Axis 1(%)",
+  labs(x        = "Variability \n explained by WSI",
        y        = "Count") +
   theme_classic(base_size = 11)
 
@@ -213,7 +213,7 @@ appendix_pcoa_permutation_variance_axis1 <- ggplot(perm_long %>% filter(axis == 
 appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = Ax1)) +
   geom_histogram(fill = "grey70", color = "white", bins = 40) +
   geom_vline(xintercept = obs_mean_loading, color = "red", linewidth = 0.8) +
-  labs(x        = "Mean variable loading \n on Axis 1",
+  labs(x        = "Mean correlation \n of variables \n with WSI",
        y        = "Count"
        # title    = "Is the positive shift in PCo1 loadings beyond chance?",
        # subtitle = paste0("Observed mean = ", round(obs_mean_loading, 3),
@@ -223,7 +223,7 @@ appendix_pcoa_mean_loading_axis1 <- ggplot(df_perm_mean_loadings, aes(x = Ax1)) 
 
 A <- loadings_plot[[2]] +
   ggtitle("A.") + 
-  labs(x = "Women's Status Index", y = NULL)
+  labs(x = "Women's Status Index (WSI)", y = NULL)
 
 B <- appendix_pcoa_permutation_variance_axis1 +
   ggtitle("B.") 
@@ -233,6 +233,7 @@ C <- appendix_pcoa_mean_loading_axis1 +
 
 legend <- loadings_plot[[1]]
 legend_wrapped <- wrap_elements(full = legend)
+  
 
 layout <- "
 AB

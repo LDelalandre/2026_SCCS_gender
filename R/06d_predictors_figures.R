@@ -11,7 +11,7 @@ plot_mod_axis1 <- mod_axis1_phylo %>%
   gather_draws(b_complexity, bsp_momatri_cat) %>%
   mutate(.variable = recode(.variable,
                             b_complexity      = "Complexity",
-                            bsp_momatri_cat  = "Kinship")) %>%
+                            bsp_momatri_cat  = "Matri_index")) %>%
   ggplot(aes(x = .value, y = .variable)) +
   stat_halfeye(.width = c(0.89, 0.95),
                fill = "#7F77DD", alpha = 0.8) +
@@ -51,13 +51,23 @@ modal_matri <- pred_resp %>%
   slice_max(n, n = 1) %>%
   pull(matri_cat)
 
-complexity_grid <- tibble(
-  complexity = seq(
-    min(pred_resp$complexity, na.rm = TRUE),
-    max(pred_resp$complexity, na.rm = TRUE),
-    length.out = 100
-  ),
-  matri_cat = modal_matri
+# complexity_grid <- tibble(
+#   complexity = seq(
+#     min(pred_resp$complexity, na.rm = TRUE),
+#     max(pred_resp$complexity, na.rm = TRUE),
+#     length.out = 100
+#   ),
+#   matri_cat = modal_matri
+# )
+
+model_data <- pred_resp_phylo %>%
+  tidyr::drop_na(Axis.1, complexity, matri_cat) %>%
+  mutate(phylo = factor(phylo))
+
+complexity_grid <- tidyr::crossing(
+  complexity = unique(model_data$complexity),
+  matri_cat = unique(model_data$matri_cat),
+  phylo = levels(model_data$phylo)
 )
 
 pred_complexity <- complexity_grid %>%
@@ -70,15 +80,15 @@ pred_complexity <- complexity_grid %>%
     .groups = "drop"
   )
 
-pred_complexity <- complexity_grid %>%
-  add_epred_draws(mod_axis1_phylo, ndraws = 500, re_formula = NA) %>%
-  group_by(complexity) %>%
-  summarise(
-    mean  = mean(.epred),
-    lower = quantile(.epred, 0.025),
-    upper = quantile(.epred, 0.975),
-    .groups = "drop"
-  )
+# pred_complexity <- complexity_grid %>%
+#   add_epred_draws(mod_axis1_phylo, ndraws = 500, re_formula = NA) %>%
+#   group_by(complexity) %>%
+#   summarise(
+#     mean  = mean(.epred),
+#     lower = quantile(.epred, 0.025),
+#     upper = quantile(.epred, 0.975),
+#     .groups = "drop"
+#   )
 
 # grid_full <- tidyr::crossing(
 #   complexity_grid,
@@ -107,18 +117,24 @@ p_a <- ggplot() +
   geom_point(data = pred_resp %>% drop_na(Axis.1, complexity),
              aes(x = complexity, y = Axis.1),
              alpha = 0.5, size = 1.8) +
-  labs(x = "Complexity", y = "Axis 1", title = "A") +
+  labs(x = "Complexity", y = "Women's Status Index", title = "A") +
   theme_classic()
 
 # ── Panel B: Axis.1 ~ matri_cat ───────────────────────────────────────────────
-matri_grid <- tibble(
-  matri_cat = levels(pred_resp$matri_cat) %>% 
-    factor(levels = levels(pred_resp$matri_cat)), # preserve factor levels
-  complexity = mean(pred_resp$complexity, na.rm = TRUE)
+# matri_grid <- tibble(
+#   matri_cat = levels(pred_resp$matri_cat) %>% 
+#     factor(levels = levels(pred_resp$matri_cat)), # preserve factor levels
+#   complexity = mean(pred_resp$complexity, na.rm = TRUE)
+# )
+
+matri_grid <- tidyr::crossing(
+  complexity = unique(model_data$complexity),
+  matri_cat = unique(model_data$matri_cat),
+  phylo = levels(model_data$phylo)
 )
 
 pred_matri <- matri_grid %>%
-  add_epred_draws(m_axis1, ndraws = 500) %>%
+  add_epred_draws(mod_axis1_phylo, ndraws = 500) %>%
   group_by(matri_cat) %>%
   summarise(
     mean  = mean(.epred),
@@ -137,13 +153,14 @@ p_b <- ggplot() +
   geom_pointrange(data = pred_matri,
                   aes(x = matri_cat, y = mean, ymin = lower, ymax = upper),
                   colour = "#2196F3", size = 0.7, linewidth = 1.1) +
-  labs(x = "Kinship", y = "Axis 1", title = "B") +
+  labs(x = "Matri_index", y = "Women's Status Index", title = "B") +
   theme_classic()
 
 # ── Combine ────────────────────────────────────────────────────────────────────
 plot_complexity_matri_axis1 <- p_a + p_b
 
-ggsave("draft/fig/plot_complexity_matri_axis1.png", plot_complexity_matri_axis1)
+ggsave("draft/fig/plot_complexity_matri_axis1.png", plot_complexity_matri_axis1, 
+       width = 16, height = 11, units = "cm", dpi = 300)
 
 
 

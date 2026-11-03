@@ -277,8 +277,8 @@ predictors_loadings <- flextable(table_loadings2) %>%
   width(j = "Analysis", width = 1) %>%
   width(j = c("Axis 1", "Axis 2"), width = 0.6) %>%
   # Font
-  font(fontname = "Times New Roman", part = "all") %>%
-  fontsize(size = 10, part = "all") %>%
+  flextable::font(fontname = "Times New Roman", part = "all") %>%
+  flextable::fontsize(size = 10, part = "all") %>%
   # Caption
   set_caption("Table S3: Predictor variables, and their grouping in 
   theoretically-informed categories. Variables are categorical, ordinal.
@@ -333,7 +333,7 @@ short_names <- c(
   "agriculture_cereals"    = "Agri. type",
   "agriculture_importance" = "Agri. importance",
   "herding_importance"     = "Herding",
-  "herding_milk"           = "Herding milk",
+  "herding_milk"           = "Dairying",
   "hunting"                = "Hunting",
   "warfare"                = "Warfare",
   "matri"                  = "Matrilineality"
@@ -381,7 +381,16 @@ cor_table <- map_dfr(predictors, function(pred) {
     mutate(predictor = pred, .before = 1)
 })
 
-table_cor_pred_axes <- cor_table %>% 
+
+  
+
+table_cor_pred_axes <- short_names %>% 
+  as.data.frame() %>% 
+  rownames_to_column("predictor") %>% 
+  rename(Predictor = ".") %>% 
+  left_join(cor_table) %>% 
+  select(-predictor) %>% 
+  
   flextable() %>% 
   set_caption("Table S5: Correlation between synthetic predictors and 
               the axes of the PCoA on women status variables. 
@@ -511,4 +520,50 @@ save_as_docx(
 )
 
 
+## Long tables as csv. ####
 
+table_S1 <- whyte_category_angarika %>%
+  filter(!is.na(category_whyte)) %>%
+  filter(!is.na(var_id)) %>%
+  left_join(codes_max_values) %>% 
+  left_join(direction_table_clean) %>% 
+  left_join(variable_coverage) %>% 
+  mutate(category_Angarika = factor(category_Angarika, levels = names(category_colors))) %>%
+  arrange(category_Angarika, title_shortened) %>% 
+  arrange(category_Angarika, title_shortened) %>% 
+  select(var_id, var_id_whyte, title_shortened, title, name, max_value, 
+         category_Angarika, category_whyte, everything()) %>% 
+  dplyr::rename(
+    ID_SCCS = var_id,
+    ID_Whyte = var_id_whyte,
+    `Short name` = title_shortened,
+    `Full name` = title,
+    `Highest value` = max_value,
+    `Description of the highest value` = name,
+    `Whyte's category` = category_whyte,
+    `Our category` = category_Angarika,
+    `Coding direction changed` = recoded,
+    Coverage = coverage
+  )
+
+write.csv(table_S1, "draft/submission/2026-11_Nature Human Behavior/tableS1.csv", row.names = FALSE)
+
+
+table_S2 <- coord_societies %>%
+  left_join(society_coverage_to_merge) %>% 
+  dplyr::rename(
+    Society = pref_name_for_society,
+    `SCCS ID` = soc_id,
+    `Women's Status Index` = Ax1,
+    `Focal year` = main_focal_year,
+    Region = region6,
+    Latitude = origLat,
+    Longitude = origLong,
+    `Main subsistence mode` = description,
+    `HRAF name (ID)` = HRAF_name_ID,
+    `HRAF URL` = HRAF_link,
+    `Society name in the phylogenetic tree` = phylo,
+    Coverage = coverage
+  )
+
+write.csv(table_S2, "draft/submission/2026-11_Nature Human Behavior/tableS2.csv", row.names = FALSE)
